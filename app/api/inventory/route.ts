@@ -4,7 +4,7 @@ import { getRuntimeEnv } from "@/lib/runtime-env";
 
 type D1Rows = { results?: Record<string, unknown>[] };
 
-export async function GET() {
+export async function GET(request: Request) {
   const db = getRuntimeEnv().DB;
   if (!db) return Response.json({ inventory: sampleInventory.map(phone => ({ ...phone, imageUrl: phoneArtUrl(phone) })), demo: true }, { headers: { "Cache-Control": "no-store" } });
   try {
@@ -24,6 +24,10 @@ export async function GET() {
     const inventory = (data.results ?? []).map(row => ({ ...row, imageUrl: phoneArtUrl({ brand: String(row.brand), model: String(row.model), colour: String(row.colour), colourHex: String(row.colourHex) }) }));
     return Response.json({ inventory }, { headers: { "Cache-Control": "public, max-age=15, stale-while-revalidate=30" } });
   } catch {
-    return Response.json({ inventory: sampleInventory.map(phone => ({ ...phone, imageUrl: phoneArtUrl(phone) })), demo: true }, { headers: { "Cache-Control": "no-store" } });
+    const host = new URL(request.url).hostname;
+    if (host === "terminal.local" || host === "localhost" || host === "127.0.0.1") {
+      return Response.json({ inventory: sampleInventory.map(phone => ({ ...phone, imageUrl: phoneArtUrl(phone) })), demo: true }, { headers: { "Cache-Control": "no-store" } });
+    }
+    return Response.json({ error: "Live inventory is temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 }
