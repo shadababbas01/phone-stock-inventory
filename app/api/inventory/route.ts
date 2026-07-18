@@ -1,11 +1,12 @@
 import { sampleInventory } from "@/lib/catalog";
+import { phoneArtUrl } from "@/lib/phone-art";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
 type D1Rows = { results?: Record<string, unknown>[] };
 
 export async function GET() {
   const db = getRuntimeEnv().DB;
-  if (!db) return Response.json({ inventory: sampleInventory, demo: true }, { headers: { "Cache-Control": "no-store" } });
+  if (!db) return Response.json({ inventory: sampleInventory.map(phone => ({ ...phone, imageUrl: phoneArtUrl(phone) })), demo: true }, { headers: { "Cache-Control": "no-store" } });
   try {
     const data = await db.prepare(`
       SELECT v.id, b.name AS brand, m.model_name AS model, v.slug, v.ram_gb AS ramGb,
@@ -20,8 +21,9 @@ export async function GET() {
       WHERE v.active = 1 AND m.active = 1 AND b.active = 1
       ORDER BY v.featured DESC, v.id ASC
     `).all() as D1Rows;
-    return Response.json({ inventory: data.results ?? [] }, { headers: { "Cache-Control": "public, max-age=15, stale-while-revalidate=30" } });
+    const inventory = (data.results ?? []).map(row => ({ ...row, imageUrl: phoneArtUrl({ brand: String(row.brand), model: String(row.model), colour: String(row.colour), colourHex: String(row.colourHex) }) }));
+    return Response.json({ inventory }, { headers: { "Cache-Control": "public, max-age=15, stale-while-revalidate=30" } });
   } catch {
-    return Response.json({ inventory: sampleInventory, demo: true }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ inventory: sampleInventory.map(phone => ({ ...phone, imageUrl: phoneArtUrl(phone) })), demo: true }, { headers: { "Cache-Control": "no-store" } });
   }
 }
