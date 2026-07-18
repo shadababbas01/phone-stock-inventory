@@ -6,6 +6,7 @@ import { money, type PhoneVariant } from "@/lib/catalog";
 import { phoneArtUrl } from "@/lib/phone-art";
 
 const brands = ["All phones", "Samsung", "Apple", "Motorola", "OnePlus", "Nothing", "Google"];
+const publicStoreUrl = "https://manglacom.shadabagasta.workers.dev";
 
 function SearchIcon() {
   return <span aria-hidden="true" className="search-icon" />;
@@ -19,13 +20,15 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
   const available = Math.max(0, phone.availableStock - phone.reservedStock);
   const savings = phone.mrp - phone.sellingPrice;
   const shareText = `${phone.brand} ${phone.model} · ${phone.ramGb}GB/${phone.storageGb}GB · ${phone.colour} · ${money(phone.sellingPrice)} · ${available > 0 ? `${available} available` : "Out of stock"}`;
+  const productUrl = `${publicStoreUrl}/?phone=${phone.slug}`;
+  const whatsappText = `Is this device in stock?\n\n${shareText}\n${productUrl}`;
   const artwork = phoneArtUrl(phone);
   const share = async () => {
     const url = `${window.location.origin}/?phone=${phone.slug}`;
     if (navigator.share) await navigator.share({ title: `${phone.brand} ${phone.model}`, text: shareText, url });
     else {
-      await navigator.clipboard.writeText(url);
-      window.dispatchEvent(new CustomEvent("phonestock-toast", { detail: "Product link copied" }));
+      await navigator.clipboard.writeText(`${shareText}\n${url}`);
+      window.dispatchEvent(new CustomEvent("phonestock-toast", { detail: "Product details and link copied" }));
     }
   };
 
@@ -38,8 +41,8 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
         <span className="illustration-badge">Illustrative image</span>
       </div>
       <div className="product-content">
-        <p className="eyebrow">{phone.brand}</p>
-        <h2>{phone.model}</h2>
+        <p className="eyebrow" title={phone.brand}>{phone.brand}</p>
+        <h2 title={phone.model}>{phone.model}</h2>
         <div className="price-rule" />
         <p className="selling-price">{money(phone.sellingPrice)}</p>
         <p className="mrp">MRP <s>{money(phone.mrp)}</s> <strong>Save {money(savings)}</strong></p>
@@ -47,12 +50,12 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
           {available === 0 ? "Out of stock" : `${available} in stock`}
         </span>
         <div className="spec-grid" aria-label={`${phone.model} specifications`}>
-          <div><strong>{phone.ramGb}GB</strong><span>RAM</span></div>
-          <div><strong>{phone.storageGb}GB</strong><span>Storage</span></div>
-          <div><strong><i style={{ background: phone.colourHex }} />{phone.colour}</strong><span>Colour</span></div>
+          <div><strong title={`${phone.ramGb}GB RAM`}>{phone.ramGb}GB</strong><span>RAM</span></div>
+          <div><strong title={`${phone.storageGb}GB Storage`}>{phone.storageGb}GB</strong><span>Storage</span></div>
+          <div><strong title={phone.colour}><i style={{ background: phone.colourHex }} />{phone.colour}</strong><span>Colour</span></div>
         </div>
         <div className="card-actions">
-          <a className="whatsapp-btn" href={`https://wa.me/917011693657?text=${encodeURIComponent("is this device in stock?")}`} target="_blank" rel="noreferrer" aria-label={`Ask Mangla Communication about ${phone.model} on WhatsApp`}>
+          <a className="whatsapp-btn" href={`https://wa.me/917011693657?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noreferrer" aria-label={`Ask Mangla Communication about ${phone.model} on WhatsApp`}>
             <WhatsAppIcon /> WhatsApp
           </a>
           <button className="share-btn" onClick={share} aria-label={`Share ${phone.model}`} title="Share product">↗</button>
@@ -136,6 +139,8 @@ export default function Storefront() {
     return [...rows].sort((a, b) => sort === "price-low" ? a.sellingPrice - b.sellingPrice : sort === "price-high" ? b.sellingPrice - a.sellingPrice : sort === "stock" ? (b.availableStock - b.reservedStock) - (a.availableStock - a.reservedStock) : a.id - b.id);
   }, [inventory, query, brand, ram, storage, maxPrice, inStock, sort]);
 
+  const brandOptions = useMemo(() => ["All phones", ...Array.from(new Set(inventory.map(phone => phone.brand))).sort()], [inventory]);
+
   const totalAvailable = inventory.reduce((sum, p) => sum + Math.max(0, p.availableStock - p.reservedStock), 0);
   const totalPhones = inventory.reduce((sum, p) => sum + Math.max(0, p.availableStock), 0);
   const lowStock = inventory.filter(p => p.availableStock - p.reservedStock > 0 && p.availableStock - p.reservedStock <= p.reorderLevel).length;
@@ -186,6 +191,7 @@ export default function Storefront() {
           </div>
           <button className="mobile-filter-button" onClick={() => setFiltersOpen(v => !v)} aria-expanded={filtersOpen}>Filters <span>▾</span></button>
           <div className={`filter-selects ${filtersOpen ? "open" : ""}`}>
+            <label><span>Brand</span><select value={brand} onChange={e => setBrand(e.target.value)}>{brandOptions.map(item => <option key={item} value={item}>{item === "All phones" ? "All" : item}</option>)}</select></label>
             <label><span>RAM</span><select value={ram} onChange={e => setRam(e.target.value)}><option>All</option><option>8</option><option>12</option><option>16</option></select></label>
             <label><span>Storage</span><select value={storage} onChange={e => setStorage(e.target.value)}><option>All</option><option>128</option><option>256</option><option>512</option></select></label>
             <label><span>Price</span><select value={maxPrice} onChange={e => setMaxPrice(e.target.value)}><option>All</option><option value="25000">Under ₹25k</option><option value="50000">Under ₹50k</option><option value="75000">Under ₹75k</option></select></label>
