@@ -1,0 +1,10 @@
+{
+  "name": "PhoneStock Inventory",
+  "short_name": "PhoneStock",
+  "description": "Live phone stock and price catalogue",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff8ed",
+  "theme_color": "#e99524",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
