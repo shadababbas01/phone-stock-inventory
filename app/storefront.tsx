@@ -1,7 +1,9 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- generated SVG artwork and the supplied logo are served locally. */
 
 import { useEffect, useMemo, useState } from "react";
 import { money, sampleInventory, type PhoneVariant } from "@/lib/catalog";
+import { phoneArtUrl } from "@/lib/phone-art";
 
 const brands = ["All phones", "Samsung", "Apple", "Motorola", "OnePlus", "Nothing", "Google"];
 
@@ -13,6 +15,7 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
   const available = Math.max(0, phone.availableStock - phone.reservedStock);
   const savings = phone.mrp - phone.sellingPrice;
   const shareText = `${phone.brand} ${phone.model} · ${phone.ramGb}GB/${phone.storageGb}GB · ${phone.colour} · ${money(phone.sellingPrice)} · ${available > 0 ? `${available} available` : "Out of stock"}`;
+  const artwork = phoneArtUrl(phone);
   const share = async () => {
     const url = `${window.location.origin}/?phone=${phone.slug}`;
     if (navigator.share) await navigator.share({ title: `${phone.brand} ${phone.model}`, text: shareText, url });
@@ -25,10 +28,10 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
   return (
     <article className="product-card" id={phone.slug}>
       <div className="product-image-wrap">
-        {/* Locally optimized WebP keeps the catalogue lightweight without a remote image service. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={phone.imageUrl} alt={`Brand-neutral product representation for ${phone.brand} ${phone.model}`} className="product-image" />
+        {/* Generated locally from the saved brand, model and colour; no device-image API is used. */}
+        <img src={artwork} alt={`Illustrative ${phone.colour} catalogue artwork for ${phone.brand} ${phone.model}`} className="product-image" />
         <span className="network-badge">{phone.networkType}</span>
+        <span className="illustration-badge">Illustrative image</span>
       </div>
       <div className="product-content">
         <p className="eyebrow">{phone.brand}</p>
@@ -42,8 +45,8 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
           {available === 0 ? "Out of stock" : `${available} in stock`}
         </span>
         <div className="card-actions">
-          <a className="whatsapp-btn" href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer" aria-label={`Share ${phone.model} on WhatsApp`}>
-            <span aria-hidden="true">◉</span> WhatsApp
+          <a className="whatsapp-btn" href={`https://wa.me/917011693657?text=${encodeURIComponent("is this device in stock?")}`} target="_blank" rel="noreferrer" aria-label={`Ask Mangla Communication about ${phone.model} on WhatsApp`}>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.5 3.5A11.8 11.8 0 0 0 12.1 0C5.6 0 .3 5.3.3 11.8c0 2.1.5 4.1 1.6 5.9L0 24l6.5-1.7a12 12 0 0 0 5.6 1.4h.1c6.5 0 11.8-5.3 11.8-11.8 0-3.2-1.2-6.1-3.5-8.4Zm-8.4 18.2c-1.7 0-3.4-.5-4.9-1.4l-.4-.2-3.9 1 1-3.8-.2-.4a9.8 9.8 0 1 1 8.4 4.8Zm5.4-7.3c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.2-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-1.8-.9-3-1.6-4.2-3.7-.3-.5.3-.5.9-1.7.1-.2 0-.4 0-.6l-.9-2.1c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.3 1.4 3.5c.1.2 2.4 3.7 5.8 5.2 2.2.9 3 .9 4.1.8.7-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg> WhatsApp
           </a>
           <button className="share-btn" onClick={share} aria-label={`Share ${phone.model}`} title="Share product">↗</button>
         </div>
@@ -109,8 +112,7 @@ export default function Storefront() {
     <main className="storefront-shell">
       <header className="site-header">
         <a href="#top" className="brand-lockup" aria-label="Mangla Communication home">
-          <span className="logo-mark" aria-hidden="true"><span>₹</span></span>
-          <span>Mangla <em>Communication</em></span>
+          <img src="/mangla-logo.svg" alt="Mangla Communication" className="brand-logo" />
         </a>
         <nav aria-label="Primary navigation">
           <a href="#inventory" className="active">Inventory</a>
@@ -164,7 +166,7 @@ export default function Storefront() {
         )}
       </section>
 
-      <footer><div className="container"><div className="brand-lockup small"><span className="logo-mark"><span>₹</span></span><span>Mangla Communication</span></div><p>Prices and availability can change. Contact the shop to reserve a device.</p><a href="/admin">Shop administration</a></div></footer>
+      <footer><div className="container"><div className="brand-lockup small"><img src="/mangla-logo.svg" alt="Mangla Communication" className="brand-logo" /></div><p>Prices and availability can change. Contact the shop to reserve a device.</p><a href="/admin">Shop administration</a></div></footer>
       <nav className="mobile-tabbar" aria-label="Mobile app navigation">
         <a href="#top" className="active"><span aria-hidden="true">⌂</span><b>Home</b></a>
         <button type="button" onClick={() => { document.getElementById("catalog-search")?.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span aria-hidden="true">⌕</span><b>Search</b></button>
