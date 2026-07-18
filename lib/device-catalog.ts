@@ -48,8 +48,12 @@ export const commonBrands = [...new Set(deviceProfiles.map(device => device.bran
 function includesQuery(value: string, query: string) {
   const normalized = query.trim().toLowerCase();
   if (!normalized) return true;
-  return value.toLowerCase().includes(normalized) ||
-    value.toLowerCase().replace(/galaxy|iphone|phone|vivo|oppo|realme|poco|redmi|xiaomi|oneplus|motorola|google/gi, "").trim().includes(normalized);
+  const lower = value.toLowerCase();
+  const simplified = lower.replace(/galaxy|iphone|phone|vivo|oppo|realme|poco|redmi|xiaomi|oneplus|motorola|google/gi, "").trim();
+  if (normalized.length <= 2) {
+    return lower.startsWith(normalized) || simplified.split(/\s+/).some(token => token.startsWith(normalized));
+  }
+  return lower.includes(normalized) || simplified.includes(normalized);
 }
 
 export function localSuggestions(brand = "", query = "", model = "") {
