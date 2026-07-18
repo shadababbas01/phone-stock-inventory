@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Live mobile phone prices, exact variants and stock availability at Mangla Communication.",
   manifest: "/manifest.webmanifest",
   other: { "codex-preview": "development" },
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg", apple: "/favicon.svg" },
+  icons: { icon: "/mangla-logo.svg", shortcut: "/mangla-logo.svg", apple: "/mangla-logo.svg" },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Mangla Communication" },
   formatDetection: { telephone: false },
 };
