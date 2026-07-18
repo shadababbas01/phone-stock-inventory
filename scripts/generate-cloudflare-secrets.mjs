@@ -6,8 +6,11 @@ if (!password) throw new Error("ADMIN_PASSWORD is required");
 const salt = randomBytes(16);
 const passwordHash = pbkdf2Sync(password, salt, 100_000, 32, "sha256");
 
-process.stdout.write(JSON.stringify({
+const secrets = {
   ADMIN_PASSWORD_HASH: passwordHash.toString("base64"),
   ADMIN_PASSWORD_SALT: salt.toString("base64"),
   ADMIN_SESSION_SECRET: randomBytes(32).toString("base64"),
-}));
+};
+if (process.env.MOBILE_API_KEY) secrets.MOBILE_API_KEY = process.env.MOBILE_API_KEY;
+
+process.stdout.write(JSON.stringify(secrets));
