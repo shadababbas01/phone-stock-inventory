@@ -60,12 +60,14 @@ jobs:
             });
           ')"
           if [ -z "$DATABASE_ID" ]; then
-            DATABASE_ID="$(npx wrangler d1 create phone-stock-inventory --json | node -e '
+            npx wrangler d1 create phone-stock-inventory
+            DATABASE_ID="$(npx wrangler d1 list --json | node -e '
               let input = "";
               process.stdin.on("data", chunk => input += chunk);
               process.stdin.on("end", () => {
-                const database = JSON.parse(input);
-                process.stdout.write(database.uuid || database.id || database.database_id || "");
+                const databases = JSON.parse(input);
+                const match = databases.find(database => database.name === "phone-stock-inventory");
+                process.stdout.write(match?.uuid || match?.id || "");
               });
             ')"
           fi
