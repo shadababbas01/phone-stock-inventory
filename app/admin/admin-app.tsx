@@ -1,8 +1,10 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- generated SVG previews and the supplied logo are served locally. */
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { money, type PhoneVariant } from "@/lib/catalog";
 import { sampleAdminInventory } from "@/lib/admin-sample";
+import { phoneArtUrl } from "@/lib/phone-art";
 
 type Tab = "inventory" | "stock" | "reports" | "suppliers" | "settings";
 type DeviceOptions = {
@@ -16,10 +18,10 @@ type DeviceOptions = {
 };
 
 const emptyOptions: DeviceOptions = { brands: [], models: [], colours: [], ramGb: [], storageGb: [], exactMatch: false, source: "catalog" };
-const emptyForm = { brand: "", model: "", ramGb: "8", storageGb: "128", colour: "", networkType: "5G", mrp: "", sellingPrice: "", purchasePrice: "", availableStock: "0", reorderLevel: "2", imageUrl: "/phones/phone-silver.webp" };
+const emptyForm = { brand: "", model: "", ramGb: "8", storageGb: "128", colour: "", networkType: "5G", mrp: "", sellingPrice: "", purchasePrice: "", availableStock: "0", reorderLevel: "2" };
 
 function Brand({ compact = false }: { compact?: boolean }) {
-  return <span className="brand-lockup"><span className="logo-mark"><span>₹</span></span><span>Mangla {!compact && <em>Communication</em>}</span></span>;
+  return <span className={`brand-lockup ${compact ? "compact" : ""}`}><img src="/mangla-logo.svg" alt="Mangla Communication" className="brand-logo" /></span>;
 }
 
 export default function AdminApp() {
@@ -239,6 +241,7 @@ export default function AdminApp() {
         <label>Colour *<input list="phone-colour-options" value={form.colour} onChange={e => setForm({ ...form, colour: e.target.value })} placeholder={form.model ? "Choose official colour" : "Choose model first"} autoComplete="off" disabled={!form.model} required /><datalist id="phone-colour-options">{deviceOptions.colours.map(colour => <option key={colour} value={colour} />)}</datalist></label>
         <label>Network<select value={form.networkType} onChange={e => setForm({ ...form, networkType: e.target.value })}><option>5G</option><option>4G</option><option>3G</option></select></label>
         <p className="suggestion-status full" aria-live="polite">{suggestionsBusy ? "Finding matching phones and variants…" : deviceOptions.exactMatch ? `Variant choices ready · ${deviceOptions.source === "internet" ? "live device catalogue" : deviceOptions.source === "saved" ? "your saved stock" : "built-in catalogue"}` : "Type or tap a suggestion. You can still enter a model manually."}</p>
+        {form.brand && form.model && form.colour && <div className="variant-art-preview full"><img src={phoneArtUrl(form)} alt={`Generated preview for ${form.brand} ${form.model} in ${form.colour}`} /><div><strong>Automatic image preview</strong><span>Generated from brand, model and colour. No image API or extra charge.</span></div></div>}
         <label>MRP (₹) *<input type="number" min="1" value={form.mrp} onChange={e => setForm({ ...form, mrp: e.target.value })} inputMode="numeric" required /></label>
         <label>Selling price (₹) *<input type="number" min="1" value={form.sellingPrice} onChange={e => setForm({ ...form, sellingPrice: e.target.value })} inputMode="numeric" required /></label>
         <label>Purchase price (private)<input type="number" min="0" value={form.purchasePrice} onChange={e => setForm({ ...form, purchasePrice: e.target.value })} inputMode="numeric" /></label>
