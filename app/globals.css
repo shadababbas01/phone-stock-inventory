@@ -28,6 +28,7 @@ img { display: block; max-width: 100%; }
 .site-header { height: 86px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 52px; background: rgba(255,253,248,.94); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 40; backdrop-filter: blur(18px); }
 .brand-lockup { display: inline-flex; align-items: center; gap: 13px; width: fit-content; font-family: Georgia, "Times New Roman", serif; font-size: 28px; font-weight: 600; letter-spacing: -.5px; }
 .brand-lockup em { font-style: normal; font-weight: 400; }
+.brand-logo { width: 226px; height: 62px; object-fit: contain; object-position: left center; }
 .logo-mark { width: 39px; height: 52px; display: inline-grid; place-items: center; border: 2px solid var(--ink); border-radius: 8px; position: relative; background: #fff; }
 .logo-mark::before { content: ""; position: absolute; top: 4px; width: 10px; height: 2px; border-radius: 2px; background: var(--ink); }
 .logo-mark span { position: absolute; right: -10px; top: 15px; width: 27px; height: 34px; display: grid; place-items: center; background: var(--saffron); color: #fff; border-radius: 5px 5px 9px 5px; font-family: Arial, sans-serif; font-weight: 800; transform: rotate(-9deg); box-shadow: 0 4px 10px rgba(201,111,0,.25); }
@@ -88,8 +89,9 @@ img { display: block; max-width: 100%; }
 .product-card { min-width: 0; display: grid; grid-template-columns: 47% 53%; min-height: 360px; background: var(--panel); border: 1px solid var(--border); border-radius: 19px; overflow: hidden; box-shadow: var(--shadow); transition: transform .18s ease-out, box-shadow .18s ease-out, border-color .18s ease-out; }
 .product-card:hover { transform: translateY(-2px); border-color: #d8bea1; box-shadow: 0 16px 38px rgba(81,55,35,.13); }
 .product-image-wrap { position: relative; display: grid; place-items: center; background: linear-gradient(145deg, #f8ecdd, #fffaf2); min-width: 0; }
-.product-image { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; }
+.product-image { width: 100%; height: 100%; object-fit: cover; }
 .network-badge { position: absolute; left: 12px; top: 12px; font-size: 11px; font-weight: 800; color: var(--teal-dark); background: rgba(255,255,255,.88); border: 1px solid rgba(21,122,110,.2); border-radius: 999px; padding: 5px 8px; }
+.illustration-badge { position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 5px 7px; border-radius: 7px; background: rgba(255,255,255,.86); color: #75665e; text-align: center; font-size: 9px; font-weight: 800; letter-spacing: .03em; backdrop-filter: blur(5px); }
 .product-content { padding: 21px 18px 16px; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
 .product-content .eyebrow { margin: 0 0 4px; font-size: 11px; font-weight: 800; color: var(--saffron-dark); text-transform: uppercase; letter-spacing: .1em; }
 .product-content h2 { margin: 0; font-family: Georgia, serif; font-size: clamp(19px, 1.55vw, 25px); line-height: 1.1; font-weight: 500; }
@@ -107,7 +109,7 @@ img { display: block; max-width: 100%; }
 .card-actions { display: flex; gap: 9px; margin-top: auto; padding-top: 13px; width: 100%; }
 .whatsapp-btn, .share-btn { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid #cba77e; background: #fff; color: var(--teal); font-weight: 800; font-size: 12px; cursor: pointer; transition: .16s ease-out; }
 .whatsapp-btn { flex: 1; gap: 7px; }
-.whatsapp-btn span { font-size: 18px; }
+.whatsapp-btn svg { width: 18px; height: 18px; fill: currentColor; }
 .share-btn { width: 44px; font-size: 21px; color: var(--ink); }
 .whatsapp-btn:hover, .share-btn:hover { border-color: var(--teal); background: #f0faf7; }
 .updated { margin: 10px 0 0; color: #85766e; font-size: 11px; }
@@ -121,6 +123,7 @@ img { display: block; max-width: 100%; }
 footer { background: #2a211c; color: #f7eadd; padding: 28px 0; }
 footer .container { display: flex; align-items: center; gap: 28px; }
 footer .brand-lockup.small { font-family: Georgia, serif; font-size: 17px; margin-right: auto; }
+footer .brand-logo { width: 180px; height: 48px; padding: 3px 8px; border-radius: 10px; background: #fff8ed; }
 footer .small .logo-mark { transform: scale(.65); margin: -10px; }
 footer p { margin: 0; color: #cdbbac; font-size: 12px; }
 footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
@@ -131,6 +134,7 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
 .admin-shell { min-height: 100vh; background: #f7efe4; }
 .admin-topbar { height: 72px; background: #2a211c; color: #fff8ed; display: flex; align-items: center; padding: 0 28px; gap: 20px; }
 .admin-topbar .brand-lockup { font-size: 20px; }
+.admin-topbar .brand-logo { width: 176px; height: 48px; padding: 2px 7px; border-radius: 9px; background: #fff8ed; }
 .admin-topbar .logo-mark { transform: scale(.72); margin: -7px; }
 .admin-topbar .admin-badge { margin-left: 8px; padding: 5px 9px; border-radius: 999px; background: rgba(233,149,36,.18); color: #ffc467; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .admin-topbar .topbar-actions { margin-left: auto; display: flex; gap: 8px; }
@@ -175,6 +179,7 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
 .login-page { min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at 25% 15%, rgba(233,149,36,.22), transparent 30%), #fff7eb; padding: 20px; }
 .login-card { width: min(430px, 100%); background: #fff; border: 1px solid var(--border); border-radius: 22px; padding: 32px; box-shadow: 0 22px 60px rgba(81,55,35,.14); }
 .login-card .brand-lockup { font-size: 22px; margin-bottom: 28px; }
+.login-card .brand-logo { width: 230px; height: 60px; }
 .login-card h1 { margin: 0 0 8px; font: 500 34px Georgia, serif; }
 .login-card > p { margin: 0 0 24px; color: var(--muted); line-height: 1.6; }
 .login-card label { display: block; font-size: 12px; font-weight: 800; margin-bottom: 7px; }
@@ -199,6 +204,11 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
 .form-grid input:disabled { color: #8b7d75; background-color: #f5eee5; cursor: not-allowed; }
 .form-grid .full { grid-column: 1 / -1; }
 .suggestion-status { margin: -2px 0 1px; padding: 10px 12px; border-radius: 10px; background: #edf7f4; color: #196f66; font-size: 12px; font-weight: 700; line-height: 1.4; }
+.variant-art-preview { display: grid; grid-template-columns: 112px 1fr; align-items: center; gap: 14px; padding: 11px; border: 1px solid #dbc5ad; border-radius: 13px; background: #fff; }
+.variant-art-preview img { width: 112px; height: 90px; object-fit: cover; border-radius: 9px; }
+.variant-art-preview strong, .variant-art-preview span { display: block; }
+.variant-art-preview strong { margin-bottom: 5px; color: #49382f; font-size: 13px; }
+.variant-art-preview span { color: var(--muted); font-size: 11px; line-height: 1.45; }
 .form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
 
 @media (max-width: 1100px) {
@@ -216,6 +226,7 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
   .site-header { height: 68px; padding-inline: 16px; grid-template-columns: 1fr auto; }
   .site-header nav { display: none; }
   .brand-lockup { font-size: 19px; gap: 8px; }
+  .brand-logo { width: 166px; height: 48px; }
   .brand-lockup em { display: none; }
   .logo-mark { transform: scale(.72); margin: -5px; }
   .admin-link { font-size: 12px; padding: 8px 10px; }
@@ -261,6 +272,8 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
   .report-grid { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
   .form-grid .full { grid-column: auto; }
+  .variant-art-preview { grid-template-columns: 92px 1fr; }
+  .variant-art-preview img { width: 92px; height: 76px; }
 }
 
 @media (max-width: 420px) {
