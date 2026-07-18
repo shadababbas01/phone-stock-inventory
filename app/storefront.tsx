@@ -66,6 +66,13 @@ export default function Storefront() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
+    const userAgent = navigator.userAgent;
+    const platform = /iPad|iPhone|iPod/.test(userAgent) ? "ios" : /Android/.test(userAgent) ? "android" : "desktop";
+    document.documentElement.dataset.platform = platform;
+    return () => { delete document.documentElement.dataset.platform; };
+  }, []);
+
+  useEffect(() => {
     fetch("/api/inventory", { cache: "no-store" }).then(r => r.ok ? r.json() : Promise.reject()).then(data => {
       if (Array.isArray(data.inventory) && data.inventory.length) setInventory(data.inventory);
     }).catch(() => undefined);
@@ -99,11 +106,11 @@ export default function Storefront() {
   const clearFilters = () => { setBrand("All phones"); setRam("All"); setStorage("All"); setMaxPrice("All"); setInStock(false); setQuery(""); };
 
   return (
-    <main>
+    <main className="storefront-shell">
       <header className="site-header">
-        <a href="#top" className="brand-lockup" aria-label="PhoneStock Inventory home">
+        <a href="#top" className="brand-lockup" aria-label="Mangla Communication home">
           <span className="logo-mark" aria-hidden="true"><span>₹</span></span>
-          <span>PhoneStock <em>Inventory</em></span>
+          <span>Mangla <em>Communication</em></span>
         </a>
         <nav aria-label="Primary navigation">
           <a href="#inventory" className="active">Inventory</a>
@@ -115,12 +122,12 @@ export default function Storefront() {
 
       <section className="hero" id="top">
         <div className="container">
-          <p className="hero-kicker">Live inventory · Transparent pricing</p>
+          <p className="hero-kicker">Mangla Communication · Live inventory</p>
           <h1>Find the right phone, <span>in stock today.</span></h1>
           <label className="search-box">
             <SearchIcon />
             <span className="sr-only">Search phones</span>
-            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by brand, model, RAM, storage or colour" />
+            <input id="catalog-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by brand, model, RAM, storage or colour" />
             {query && <button onClick={() => setQuery("")} aria-label="Clear search">×</button>}
           </label>
         </div>
@@ -157,7 +164,13 @@ export default function Storefront() {
         )}
       </section>
 
-      <footer><div className="container"><div className="brand-lockup small"><span className="logo-mark"><span>₹</span></span><span>PhoneStock Inventory</span></div><p>Prices and availability can change. Contact the shop to reserve a device.</p><a href="/admin">Shop administration</a></div></footer>
+      <footer><div className="container"><div className="brand-lockup small"><span className="logo-mark"><span>₹</span></span><span>Mangla Communication</span></div><p>Prices and availability can change. Contact the shop to reserve a device.</p><a href="/admin">Shop administration</a></div></footer>
+      <nav className="mobile-tabbar" aria-label="Mobile app navigation">
+        <a href="#top" className="active"><span aria-hidden="true">⌂</span><b>Home</b></a>
+        <button type="button" onClick={() => { document.getElementById("catalog-search")?.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span aria-hidden="true">⌕</span><b>Search</b></button>
+        <a href="#inventory"><span aria-hidden="true">▦</span><b>Phones</b></a>
+        <a href="/admin"><span aria-hidden="true">⚙</span><b>Admin</b></a>
+      </nav>
       {toast && <div className="toast" role="status">✓ {toast}</div>}
     </main>
   );
