@@ -1,5 +1,6 @@
 import { isAdminRequest } from "@/lib/admin-auth";
 import { sampleAdminInventory } from "@/lib/admin-sample";
+import { colourToHex, phoneArtUrl } from "@/lib/phone-art";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
 function dbBinding() {
@@ -66,11 +67,13 @@ export async function POST(request: Request) {
       if (!modelRow) throw new Error("Unable to create model");
       const slug = `${brand}-${model}-${ram}-${storage}-${colour}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       const sku = cleanText(body.sku, 60) || `${brand.slice(0,3)}-${model.slice(0,4)}-${ram}-${storage}-${colour.slice(0,2)}`.toUpperCase().replace(/\s/g, "");
+      const colourHex = colourToHex(colour);
+      const imageUrl = phoneArtUrl({ brand, model, colour, colourHex });
       const result = await db.prepare(`
         INSERT INTO phone_variants (phone_model_id, sku, slug, ram_gb, storage_gb, colour_name, colour_hex, condition, mrp, selling_price, available_stock, reserved_stock, reorder_level, image_url, featured)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0)
         RETURNING id
-      `).bind(modelRow.id, sku, slug, ram, storage, colour, cleanText(body.colourHex, 9) || "#a9c4d4", cleanText(body.condition, 20) || "New", mrp, sellingPrice, availableStock, Math.floor(positiveNumber(body.reorderLevel, 2)), cleanText(body.imageUrl, 200) || "/phones/phone-silver.webp").first<{ id: number }>();
+      `).bind(modelRow.id, sku, slug, ram, storage, colour, colourHex, cleanText(body.condition, 20) || "New", mrp, sellingPrice, availableStock, Math.floor(positiveNumber(body.reorderLevel, 2)), imageUrl).first<{ id: number }>();
       if (!result) throw new Error("Unable to create variant");
       await db.prepare("INSERT INTO inventory_private (phone_variant_id, purchase_price, minimum_selling_price) VALUES (?, ?, ?)").bind(result.id, positiveNumber(body.purchasePrice), positiveNumber(body.minimumSellingPrice)).run();
       await db.prepare("INSERT INTO audit_logs (action, table_name, record_id, after_data) VALUES ('CREATE', 'phone_variants', ?, ?)").bind(result.id, JSON.stringify({ brand, model, sku })).run();
