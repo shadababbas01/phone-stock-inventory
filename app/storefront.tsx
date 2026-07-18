@@ -124,8 +124,8 @@ export default function Storefront() {
 
       <section className="hero" id="top">
         <div className="container">
-          <p className="hero-kicker">Mangla Communication · Live inventory</p>
-          <h1>Find the right phone, <span>in stock today.</span></h1>
+          <p className="hero-kicker">Mangla Communication · Real-time stock</p>
+          <h1><span>Live</span> phone inventory</h1>
           <label className="search-box">
             <SearchIcon />
             <span className="sr-only">Search phones</span>
