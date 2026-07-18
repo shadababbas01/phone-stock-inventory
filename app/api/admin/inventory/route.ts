@@ -1,6 +1,6 @@
 import { isAdminRequest } from "@/lib/admin-auth";
 import { sampleAdminInventory } from "@/lib/admin-sample";
-import { colourToHex, phoneArtUrl } from "@/lib/phone-art";
+import { colourToHex, isTrustedPhoneImageUrl, phoneArtUrl } from "@/lib/phone-art";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 
 function dbBinding() {
@@ -53,6 +53,8 @@ export async function POST(request: Request) {
       const colour = cleanText(body.colour, 50);
       const ram = positiveNumber(body.ramGb);
       const storage = positiveNumber(body.storageGb);
+      const gtin = cleanText(body.gtin, 18).replace(/[^0-9]/g, "");
+      const manufacturerCode = cleanText(body.manufacturerCode, 60);
       const mrp = positiveNumber(body.mrp);
       const sellingPrice = positiveNumber(body.sellingPrice);
       const availableStock = Math.floor(positiveNumber(body.availableStock));
@@ -62,18 +64,20 @@ export async function POST(request: Request) {
       await db.prepare("INSERT OR IGNORE INTO brands (name, slug) VALUES (?, ?)").bind(brand, brand.toLowerCase().replace(/[^a-z0-9]+/g, "-")).run();
       const brandRow = await db.prepare("SELECT id FROM brands WHERE lower(name) = lower(?)").bind(brand).first<{ id: number }>();
       if (!brandRow) throw new Error("Unable to create brand");
-      await db.prepare("INSERT OR IGNORE INTO phone_models (brand_id, model_name, network_type) VALUES (?, ?, ?)").bind(brandRow.id, model, cleanText(body.networkType, 10) || "5G").run();
+      await db.prepare("INSERT OR IGNORE INTO phone_models (brand_id, model_name, model_number, network_type) VALUES (?, ?, ?, ?)").bind(brandRow.id, model, manufacturerCode || null, cleanText(body.networkType, 10) || "5G").run();
       const modelRow = await db.prepare("SELECT id FROM phone_models WHERE brand_id = ? AND lower(model_name) = lower(?)").bind(brandRow.id, model).first<{ id: number }>();
       if (!modelRow) throw new Error("Unable to create model");
+      if (manufacturerCode) await db.prepare("UPDATE phone_models SET model_number = COALESCE(NULLIF(model_number, ''), ?) WHERE id = ?").bind(manufacturerCode, modelRow.id).run();
       const slug = `${brand}-${model}-${ram}-${storage}-${colour}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       const sku = cleanText(body.sku, 60) || `${brand.slice(0,3)}-${model.slice(0,4)}-${ram}-${storage}-${colour.slice(0,2)}`.toUpperCase().replace(/\s/g, "");
       const colourHex = colourToHex(colour);
-      const imageUrl = phoneArtUrl({ brand, model, colour, colourHex });
+      const requestedImageUrl = cleanText(body.imageUrl, 500);
+      const imageUrl = isTrustedPhoneImageUrl(requestedImageUrl) ? requestedImageUrl : phoneArtUrl({ brand, model, colour, colourHex });
       const result = await db.prepare(`
-        INSERT INTO phone_variants (phone_model_id, sku, slug, ram_gb, storage_gb, colour_name, colour_hex, condition, mrp, selling_price, available_stock, reserved_stock, reorder_level, image_url, featured)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0)
+        INSERT INTO phone_variants (phone_model_id, sku, barcode, slug, ram_gb, storage_gb, colour_name, colour_hex, condition, mrp, selling_price, available_stock, reserved_stock, reorder_level, image_url, featured)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0)
         RETURNING id
-      `).bind(modelRow.id, sku, slug, ram, storage, colour, colourHex, cleanText(body.condition, 20) || "New", mrp, sellingPrice, availableStock, Math.floor(positiveNumber(body.reorderLevel, 2)), imageUrl).first<{ id: number }>();
+      `).bind(modelRow.id, sku, gtin || null, slug, ram, storage, colour, colourHex, cleanText(body.condition, 20) || "New", mrp, sellingPrice, availableStock, Math.floor(positiveNumber(body.reorderLevel, 2)), imageUrl).first<{ id: number }>();
       if (!result) throw new Error("Unable to create variant");
       await db.prepare("INSERT INTO inventory_private (phone_variant_id, purchase_price, minimum_selling_price) VALUES (?, ?, ?)").bind(result.id, positiveNumber(body.purchasePrice), positiveNumber(body.minimumSellingPrice)).run();
       await db.prepare("INSERT INTO audit_logs (action, table_name, record_id, after_data) VALUES ('CREATE', 'phone_variants', ?, ?)").bind(result.id, JSON.stringify({ brand, model, sku })).run();

@@ -4,6 +4,7 @@ export type PhoneStockRuntimeEnv = {
   ADMIN_PASSWORD_SALT?: string;
   ADMIN_SESSION_SECRET?: string;
   MOBILE_API_KEY?: string;
+  ICECAT_SHOPNAME?: string;
 };
 
 declare global {

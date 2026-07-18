@@ -35,10 +35,9 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
   return (
     <article className="product-card" id={phone.slug}>
       <div className="product-image-wrap">
-        {/* Generated locally from the saved brand, model and colour; no device-image API is used. */}
-        <img src={artwork} alt={`Illustrative ${phone.colour} catalogue artwork for ${phone.brand} ${phone.model}`} className="product-image" />
+        <img src={artwork} alt={`${phone.colour} ${phone.brand} ${phone.model}`} className="product-image" />
         <span className="network-badge">{phone.networkType}</span>
-        <span className="illustration-badge">Illustrative image</span>
+        <span className="illustration-badge">{phone.imageUrl?.includes("icecat.biz") ? "Product image" : "Illustrative image"}</span>
       </div>
       <div className="product-content">
         <p className="eyebrow" title={phone.brand}>{phone.brand}</p>

@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       WHERE v.active = 1 AND m.active = 1 AND b.active = 1
       ORDER BY v.featured DESC, v.id ASC
     `).all() as D1Rows;
-    const inventory = (data.results ?? []).map(row => ({ ...row, imageUrl: phoneArtUrl({ brand: String(row.brand), model: String(row.model), colour: String(row.colour), colourHex: String(row.colourHex) }) }));
+    const inventory = (data.results ?? []).map(row => ({ ...row, imageUrl: phoneArtUrl({ brand: String(row.brand), model: String(row.model), colour: String(row.colour), colourHex: String(row.colourHex), imageUrl: String(row.imageUrl ?? "") }) }));
     return Response.json({ inventory }, { headers: { "Cache-Control": "public, max-age=15, stale-while-revalidate=30" } });
   } catch {
     const host = new URL(request.url).hostname;

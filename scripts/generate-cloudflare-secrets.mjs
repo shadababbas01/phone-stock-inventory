@@ -12,5 +12,6 @@ const secrets = {
   ADMIN_SESSION_SECRET: randomBytes(32).toString("base64"),
 };
 if (process.env.MOBILE_API_KEY) secrets.MOBILE_API_KEY = process.env.MOBILE_API_KEY;
+if (process.env.ICECAT_SHOPNAME) secrets.ICECAT_SHOPNAME = process.env.ICECAT_SHOPNAME;
 
 process.stdout.write(JSON.stringify(secrets));
