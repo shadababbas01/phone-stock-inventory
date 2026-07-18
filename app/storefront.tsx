@@ -2,13 +2,17 @@
 /* eslint-disable @next/next/no-img-element -- generated SVG artwork and the supplied logo are served locally. */
 
 import { useEffect, useMemo, useState } from "react";
-import { money, sampleInventory, type PhoneVariant } from "@/lib/catalog";
+import { money, type PhoneVariant } from "@/lib/catalog";
 import { phoneArtUrl } from "@/lib/phone-art";
 
 const brands = ["All phones", "Samsung", "Apple", "Motorola", "OnePlus", "Nothing", "Google"];
 
 function SearchIcon() {
   return <span aria-hidden="true" className="search-icon" />;
+}
+
+function WhatsAppIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.5 3.5A11.8 11.8 0 0 0 12.1 0C5.6 0 .3 5.3.3 11.8c0 2.1.5 4.1 1.6 5.9L0 24l6.5-1.7a12 12 0 0 0 5.6 1.4h.1c6.5 0 11.8-5.3 11.8-11.8 0-3.2-1.2-6.1-3.5-8.4Zm-8.4 18.2c-1.7 0-3.4-.5-4.9-1.4l-.4-.2-3.9 1 1-3.8-.2-.4a9.8 9.8 0 1 1 8.4 4.8Zm5.4-7.3c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.2-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-1.8-.9-3-1.6-4.2-3.7-.3-.5.3-.5.9-1.7.1-.2 0-.4 0-.6l-.9-2.1c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.3 1.4 3.5c.1.2 2.4 3.7 5.8 5.2 2.2.9 3 .9 4.1.8.7-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg>;
 }
 
 function ProductCard({ phone }: { phone: PhoneVariant }) {
@@ -36,17 +40,20 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
       <div className="product-content">
         <p className="eyebrow">{phone.brand}</p>
         <h2>{phone.model}</h2>
-        <p className="variant-line">{phone.ramGb} GB RAM <span>•</span> {phone.storageGb} GB</p>
-        <p className="colour-line"><span style={{ background: phone.colourHex }} />{phone.colour}</p>
         <div className="price-rule" />
         <p className="selling-price">{money(phone.sellingPrice)}</p>
         <p className="mrp">MRP <s>{money(phone.mrp)}</s> <strong>Save {money(savings)}</strong></p>
         <span className={`stock-pill ${available === 0 ? "out" : available <= phone.reorderLevel ? "low" : ""}`}>
           {available === 0 ? "Out of stock" : `${available} in stock`}
         </span>
+        <div className="spec-grid" aria-label={`${phone.model} specifications`}>
+          <div><strong>{phone.ramGb}GB</strong><span>RAM</span></div>
+          <div><strong>{phone.storageGb}GB</strong><span>Storage</span></div>
+          <div><strong><i style={{ background: phone.colourHex }} />{phone.colour}</strong><span>Colour</span></div>
+        </div>
         <div className="card-actions">
           <a className="whatsapp-btn" href={`https://wa.me/917011693657?text=${encodeURIComponent("is this device in stock?")}`} target="_blank" rel="noreferrer" aria-label={`Ask Mangla Communication about ${phone.model} on WhatsApp`}>
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.5 3.5A11.8 11.8 0 0 0 12.1 0C5.6 0 .3 5.3.3 11.8c0 2.1.5 4.1 1.6 5.9L0 24l6.5-1.7a12 12 0 0 0 5.6 1.4h.1c6.5 0 11.8-5.3 11.8-11.8 0-3.2-1.2-6.1-3.5-8.4Zm-8.4 18.2c-1.7 0-3.4-.5-4.9-1.4l-.4-.2-3.9 1 1-3.8-.2-.4a9.8 9.8 0 1 1 8.4 4.8Zm5.4-7.3c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.2-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-1.8-.9-3-1.6-4.2-3.7-.3-.5.3-.5.9-1.7.1-.2 0-.4 0-.6l-.9-2.1c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.3 1.4 3.5c.1.2 2.4 3.7 5.8 5.2 2.2.9 3 .9 4.1.8.7-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg> WhatsApp
+            <WhatsAppIcon /> WhatsApp
           </a>
           <button className="share-btn" onClick={share} aria-label={`Share ${phone.model}`} title="Share product">↗</button>
         </div>
@@ -57,7 +64,9 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
 }
 
 export default function Storefront() {
-  const [inventory, setInventory] = useState(sampleInventory);
+  const [inventory, setInventory] = useState<PhoneVariant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState("All phones");
   const [ram, setRam] = useState("All");
@@ -76,13 +85,36 @@ export default function Storefront() {
   }, []);
 
   useEffect(() => {
+    let cachedInventory: PhoneVariant[] = [];
+    try {
+      const cached = localStorage.getItem("mangla-live-inventory");
+      cachedInventory = cached ? JSON.parse(cached) : [];
+      if (Array.isArray(cachedInventory) && cachedInventory.length) queueMicrotask(() => setInventory(cachedInventory));
+    } catch { cachedInventory = []; }
     fetch("/api/inventory", { cache: "no-store" }).then(r => r.ok ? r.json() : Promise.reject()).then(data => {
-      if (Array.isArray(data.inventory) && data.inventory.length) setInventory(data.inventory);
-    }).catch(() => undefined);
+      if (!Array.isArray(data.inventory)) return;
+      if (data.demo && cachedInventory.length) return;
+      setInventory(data.inventory);
+      if (!data.demo) localStorage.setItem("mangla-live-inventory", JSON.stringify(data.inventory));
+    }).catch(() => undefined).finally(() => setLoading(false));
     const listener = (event: Event) => setToast((event as CustomEvent<string>).detail);
     window.addEventListener("phonestock-toast", listener);
     return () => window.removeEventListener("phonestock-toast", listener);
   }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("mangla-theme");
+    const initial = saved === "light" || saved === "dark" ? saved : "dark";
+    queueMicrotask(() => setTheme(initial));
+    document.documentElement.dataset.theme = initial;
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("mangla-theme", next);
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -105,7 +137,8 @@ export default function Storefront() {
   }, [inventory, query, brand, ram, storage, maxPrice, inStock, sort]);
 
   const totalAvailable = inventory.reduce((sum, p) => sum + Math.max(0, p.availableStock - p.reservedStock), 0);
-  const modelCount = new Set(inventory.map(p => `${p.brand}-${p.model}`)).size;
+  const totalPhones = inventory.reduce((sum, p) => sum + Math.max(0, p.availableStock), 0);
+  const lowStock = inventory.filter(p => p.availableStock - p.reservedStock > 0 && p.availableStock - p.reservedStock <= p.reorderLevel).length;
   const clearFilters = () => { setBrand("All phones"); setRam("All"); setStorage("All"); setMaxPrice("All"); setInStock(false); setQuery(""); };
 
   return (
@@ -119,19 +152,30 @@ export default function Storefront() {
           <a href="#brands">Brands</a>
           <a href="#updates">Price updates</a>
         </nav>
-        <a href="/admin" className="admin-link"><span aria-hidden="true">♙</span> Admin</a>
+        <div className="header-actions">
+          <a className="header-whatsapp" href={`https://wa.me/917011693657?text=${encodeURIComponent("is this device in stock?")}`} target="_blank" rel="noreferrer" aria-label="Chat with Mangla Communication on WhatsApp"><WhatsAppIcon /><span>WhatsApp</span></a>
+          <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}><span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span></button>
+          <a href="/admin" className="admin-link"><span aria-hidden="true">♙</span> Admin</a>
+        </div>
       </header>
 
       <section className="hero" id="top">
         <div className="container">
           <p className="hero-kicker">Mangla Communication · Real-time stock</p>
           <h1><span>Live</span> phone inventory</h1>
+          <p className="hero-subtitle">Real-time stock. Best prices. Trusted service.</p>
           <label className="search-box">
             <SearchIcon />
             <span className="sr-only">Search phones</span>
             <input id="catalog-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by brand, model, RAM, storage or colour" />
             {query && <button onClick={() => setQuery("")} aria-label="Clear search">×</button>}
           </label>
+          <div className="trust-row" aria-label="Store benefits">
+            <span><b>✓</b><strong>100% Original</strong><small>Official warranty</small></span>
+            <span><b>◷</b><strong>Live Inventory</strong><small>Real-time stock</small></span>
+            <span><b>₹</b><strong>Best Prices</strong><small>Updated regularly</small></span>
+            <span><b>✦</b><strong>Expert Support</strong><small>Buy with confidence</small></span>
+          </div>
         </div>
       </section>
 
@@ -150,10 +194,10 @@ export default function Storefront() {
         </div>
 
         <div className="stats-strip" id="updates">
-          <div><span className="stat-icon amber">▯</span><p><strong>{modelCount}</strong><span>Models listed</span></p></div>
+          <div><span className="stat-icon amber">◇</span><p><strong>{totalPhones}</strong><span>Total phones</span></p></div>
           <div><span className="stat-icon teal">◇</span><p><strong>{totalAvailable}</strong><span>Phones available</span></p></div>
-          <div><span className="stat-icon coral">↗</span><p><strong>{inventory.filter(p => p.mrp > p.sellingPrice).length}</strong><span>Best price updates</span></p></div>
-          <div className="freshness"><span>●</span> Live stock</div>
+          <div><span className="stat-icon coral">◷</span><p><strong>{lowStock}</strong><span>Low-stock variants</span></p></div>
+          <div><span className="stat-icon amber">↗</span><p><strong>{inventory.filter(p => p.mrp > p.sellingPrice).length}</strong><span>Offers live</span></p></div>
         </div>
 
         <div className="catalog-toolbar">
@@ -161,9 +205,16 @@ export default function Storefront() {
           <label>Sort by <select value={sort} onChange={e => setSort(e.target.value)}><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="stock">Most stock</option></select></label>
         </div>
 
-        {filtered.length ? <div className="product-grid">{filtered.map(phone => <ProductCard key={phone.id} phone={phone} />)}</div> : (
+        {loading && !inventory.length ? <div className="inventory-loading" role="status"><span className="loading-spinner" /><strong>Loading live inventory…</strong><small>Your saved stock will appear here.</small></div> : filtered.length ? <div className="product-grid">{filtered.map(phone => <ProductCard key={phone.id} phone={phone} />)}</div> : (
           <div className="empty-state"><span>⌕</span><h3>No exact variants found</h3><p>Try removing a filter or searching for another model.</p><button onClick={clearFilters}>Clear all filters</button></div>
         )}
+
+        <div className="benefits-strip" aria-label="Purchase benefits">
+          <span><b>↻</b><strong>Easy replacement</strong><small>Shop support</small></span>
+          <span><b>▱</b><strong>Fast assistance</strong><small>Direct WhatsApp help</small></span>
+          <span><b>₹</b><strong>Payment options</strong><small>Ask about available modes</small></span>
+          <span><b>✓</b><strong>Best price</strong><small>Transparent pricing</small></span>
+        </div>
       </section>
 
       <footer><div className="container"><div className="brand-lockup small"><img src="/mangla-logo.svg" alt="Mangla Communication" className="brand-logo" /></div><p>Prices and availability can change. Contact the shop to reserve a device.</p><a href="/admin">Shop administration</a></div></footer>
