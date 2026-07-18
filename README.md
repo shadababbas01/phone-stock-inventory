@@ -12,6 +12,7 @@ A mobile-first phone inventory and public price catalogue for retail shops. Cust
 - Password-protected administration with a 30-minute inactivity lock
 - Private purchase price and margin data separated from public API responses
 - Add, archive, reprice and adjust-stock workflows
+- Low-typing phone entry with searchable brand/model/colour/RAM/storage suggestions
 - Append-only stock movement, price history and audit tables
 - CSV import and export
 - Low-stock and inventory valuation reports
@@ -83,6 +84,9 @@ Add these encrypted GitHub Actions repository secrets before the first run:
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN` with Workers and D1 edit access
 - `ADMIN_PASSWORD`
+- `MOBILE_API_KEY` (optional) — a MobileAPI.dev key for live internet enrichment of recent device variants
+
+The autocomplete always combines the built-in recent-device catalogue with models already saved in the shop database. When `MOBILE_API_KEY` is present it also queries the live service from the protected server route; the key is never sent to the browser.
 
 No plaintext password, password hash, database identifier or session secret is committed to the repository.
 
