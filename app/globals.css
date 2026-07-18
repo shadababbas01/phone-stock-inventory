@@ -476,6 +476,9 @@ body { color-scheme: dark; background: radial-gradient(circle at 78% 0, rgba(227
 .header-whatsapp:hover { border-color: rgba(37,211,102,.5); background: rgba(37,211,102,.08); }
 .theme-toggle { width: 42px; padding: 0; color: #f4a24e; font-size: 19px; }
 .theme-toggle:hover { border-color: #8a582c; background: #1a1e22; }
+.download-app-cta { display: inline-flex; align-items: center; gap: 9px; margin-top: 18px; padding: 11px 17px; border: 1px solid #f4a552; border-radius: 11px; color: #140e09; background: linear-gradient(135deg, #ffb15e, #e58a32); box-shadow: 0 10px 24px rgba(227,139,53,.22); font-size: 13px; font-weight: 850; transition: transform .16s ease, box-shadow .16s ease; }
+.download-app-cta span { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 6px; background: rgba(255,255,255,.3); font-size: 17px; line-height: 1; }
+.download-app-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(227,139,53,.3); }
 
 .hero {
   position: relative;
@@ -689,6 +692,7 @@ footer a { color: #f0a04d; }
   .hero-kicker { font-size: 10px; }
   .hero h1 { margin-bottom: 20px; font-size: clamp(34px, 10vw, 44px); letter-spacing: -1.7px; }
   .hero-subtitle { margin-top: -9px; font-size: 13px; }
+  .download-app-cta { margin-top: 14px; padding: 10px 14px; }
   .search-box { width: 100%; height: 52px; border: 1px solid #71451f !important; background: #14181c !important; }
   .trust-row { grid-template-columns: repeat(2, 1fr); gap: 14px 0; margin-top: 20px; }
   .trust-row > span { padding-inline: 10px; }
@@ -745,6 +749,7 @@ html[data-theme="light"] .admin-link:hover,
 html[data-theme="light"] .header-whatsapp,
 html[data-theme="light"] .theme-toggle { background: #fff; border-color: #ddcdbb; }
 html[data-theme="light"] .theme-toggle { color: #6e5947; }
+html[data-theme="light"] .download-app-cta { color: #21160c; border-color: #d67b25; box-shadow: 0 10px 24px rgba(151,83,27,.18); }
 html[data-theme="light"] .hero { background: linear-gradient(90deg, #fffaf2, #f8eee0 62%, #edd8bd); border-bottom-color: #ded2c3; }
 html[data-theme="light"] .hero::after { background: linear-gradient(145deg, rgba(255,255,255,.7), #cdb69d 48%, #7d6a5a 49%, #332a25); }
 html[data-theme="light"] .hero-subtitle { color: #6f6259; }
