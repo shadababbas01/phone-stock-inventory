@@ -18,7 +18,7 @@ type DeviceOptions = {
 };
 
 const emptyOptions: DeviceOptions = { brands: [], models: [], colours: [], ramGb: [], storageGb: [], exactMatch: false, source: "catalog" };
-const emptyForm = { brand: "", model: "", ramGb: "8", storageGb: "128", colour: "", networkType: "5G", mrp: "", sellingPrice: "", purchasePrice: "", availableStock: "0", reorderLevel: "2" };
+const emptyForm = { brand: "", model: "", gtin: "", manufacturerCode: "", imageUrl: "", ramGb: "8", storageGb: "128", colour: "", networkType: "5G", mrp: "", sellingPrice: "", purchasePrice: "", availableStock: "0", reorderLevel: "2" };
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return <span className={`brand-lockup ${compact ? "compact" : ""}`}><img src="/mangla-logo.svg" alt="Mangla Communication" className="brand-logo" /></span>;
@@ -40,6 +40,8 @@ export default function AdminApp() {
   const [notice, setNotice] = useState("");
   const [deviceOptions, setDeviceOptions] = useState<DeviceOptions>(emptyOptions);
   const [suggestionsBusy, setSuggestionsBusy] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
+  const [imageStatus, setImageStatus] = useState("Generated fallback will be used unless an exact identifier matches Icecat.");
 
   const loadInventory = async () => {
     const response = await fetch("/api/admin/inventory", { cache: "no-store" });
@@ -130,7 +132,32 @@ export default function AdminApp() {
   async function createItem(event: FormEvent) {
     event.preventDefault();
     const ok = await mutate({ action: "create", ...form, ramGb: Number(form.ramGb), storageGb: Number(form.storageGb), mrp: Number(form.mrp), sellingPrice: Number(form.sellingPrice), purchasePrice: Number(form.purchasePrice), availableStock: Number(form.availableStock), reorderLevel: Number(form.reorderLevel) });
-    if (ok) { setModalOpen(false); setForm(emptyForm); }
+    if (ok) { setModalOpen(false); setForm(emptyForm); setImageStatus("Generated fallback will be used unless an exact identifier matches Icecat."); }
+  }
+
+  async function findExactImage() {
+    if (!form.gtin && !(form.brand && form.manufacturerCode)) {
+      setImageStatus("Enter a GTIN/barcode or the brand and manufacturer code first.");
+      return;
+    }
+    setImageBusy(true);
+    try {
+      const response = await fetch("/api/admin/product-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      const data = await response.json() as { matched?: boolean; imageUrl?: string; fallbackUrl?: string; matchType?: string; reason?: string; title?: string };
+      if (response.status === 401) { setAuthenticated(false); return; }
+      if (data.matched && data.imageUrl) {
+        setForm(current => ({ ...current, imageUrl: data.imageUrl ?? "" }));
+        setImageStatus(`Exact ${data.matchType === "gtin" ? "GTIN" : "manufacturer-code"} image found${data.title ? ` · ${data.title}` : ""}.`);
+      } else {
+        setForm(current => ({ ...current, imageUrl: "" }));
+        setImageStatus(data.reason ?? "No exact image found; generated artwork will be used.");
+      }
+    } catch {
+      setForm(current => ({ ...current, imageUrl: "" }));
+      setImageStatus("Image lookup is unavailable; generated artwork will be used.");
+    } finally {
+      setImageBusy(false);
+    }
   }
 
   async function adjustStock(phone: PhoneVariant, direction?: number) {
@@ -234,14 +261,16 @@ export default function AdminApp() {
       </div>
 
       {modalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setModalOpen(false); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="add-phone-title"><div className="modal-header"><h2 id="add-phone-title">Add exact phone variant</h2><button onClick={() => setModalOpen(false)} aria-label="Close">×</button></div><form className="inventory-form" onSubmit={createItem}><div className="form-grid">
-        <label>Brand *<input list="phone-brand-options" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value, model: "", colour: "" })} placeholder="Start typing, e.g. Sam" autoComplete="off" required /><datalist id="phone-brand-options">{deviceOptions.brands.map(brand => <option key={brand} value={brand} />)}</datalist></label>
-        <label>Model *<input list="phone-model-options" value={form.model} onChange={e => setForm({ ...form, model: e.target.value, colour: "" })} placeholder={form.brand ? "Type S, A, iPhone…" : "Choose brand first"} autoComplete="off" disabled={!form.brand} required /><datalist id="phone-model-options">{deviceOptions.models.map(model => <option key={model} value={model} />)}</datalist></label>
+        <label>Brand *<input list="phone-brand-options" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value, model: "", colour: "", imageUrl: "" })} placeholder="Start typing, e.g. Sam" autoComplete="off" required /><datalist id="phone-brand-options">{deviceOptions.brands.map(brand => <option key={brand} value={brand} />)}</datalist></label>
+        <label>Model *<input list="phone-model-options" value={form.model} onChange={e => setForm({ ...form, model: e.target.value, colour: "", imageUrl: "" })} placeholder={form.brand ? "Type S, A, iPhone…" : "Choose brand first"} autoComplete="off" disabled={!form.brand} required /><datalist id="phone-model-options">{deviceOptions.models.map(model => <option key={model} value={model} />)}</datalist></label>
+        <label>Barcode / GTIN<input value={form.gtin} onChange={e => setForm({ ...form, gtin: e.target.value.replace(/[^0-9]/g, ""), imageUrl: "" })} onBlur={() => { if (form.gtin.length >= 8) void findExactImage(); }} placeholder="Scan or enter barcode" inputMode="numeric" autoComplete="off" /></label>
+        <label>Manufacturer code<input value={form.manufacturerCode} onChange={e => setForm({ ...form, manufacturerCode: e.target.value, imageUrl: "" })} onBlur={() => { if (!form.gtin && form.brand && form.manufacturerCode) void findExactImage(); }} placeholder="e.g. SM-S931BZKDEUB" autoComplete="off" /></label>
         <label>RAM (GB) *<input list="phone-ram-options" type="number" min="1" value={form.ramGb} onChange={e => setForm({ ...form, ramGb: e.target.value })} inputMode="numeric" required /><datalist id="phone-ram-options">{deviceOptions.ramGb.map(value => <option key={value} value={value} />)}</datalist></label>
         <label>Storage (GB) *<input list="phone-storage-options" type="number" min="1" value={form.storageGb} onChange={e => setForm({ ...form, storageGb: e.target.value })} inputMode="numeric" required /><datalist id="phone-storage-options">{deviceOptions.storageGb.map(value => <option key={value} value={value} />)}</datalist></label>
-        <label>Colour *<input list="phone-colour-options" value={form.colour} onChange={e => setForm({ ...form, colour: e.target.value })} placeholder={form.model ? "Choose official colour" : "Choose model first"} autoComplete="off" disabled={!form.model} required /><datalist id="phone-colour-options">{deviceOptions.colours.map(colour => <option key={colour} value={colour} />)}</datalist></label>
+        <label>Colour *<input list="phone-colour-options" value={form.colour} onChange={e => setForm({ ...form, colour: e.target.value, imageUrl: "" })} placeholder={form.model ? "Choose official colour" : "Choose model first"} autoComplete="off" disabled={!form.model} required /><datalist id="phone-colour-options">{deviceOptions.colours.map(colour => <option key={colour} value={colour} />)}</datalist></label>
         <label>Network<select value={form.networkType} onChange={e => setForm({ ...form, networkType: e.target.value })}><option>5G</option><option>4G</option><option>3G</option></select></label>
         <p className="suggestion-status full" aria-live="polite">{suggestionsBusy ? "Finding matching phones and variants…" : deviceOptions.exactMatch ? `Variant choices ready · ${deviceOptions.source === "internet" ? "live device catalogue" : deviceOptions.source === "saved" ? "your saved stock" : "built-in catalogue"}` : "Type or tap a suggestion. You can still enter a model manually."}</p>
-        {form.brand && form.model && form.colour && <div className="variant-art-preview full"><img src={phoneArtUrl(form)} alt={`Generated preview for ${form.brand} ${form.model} in ${form.colour}`} /><div><strong>Automatic image preview</strong><span>Generated from brand, model and colour. No image API or extra charge.</span></div></div>}
+        {form.brand && form.model && form.colour && <div className="variant-art-preview full"><img src={phoneArtUrl(form)} alt={`Preview for ${form.brand} ${form.model} in ${form.colour}`} /><div><strong>{form.imageUrl ? "Exact product image" : "Generated image fallback"}</strong><span>{imageStatus}</span><button type="button" className="image-lookup-btn" onClick={() => void findExactImage()} disabled={imageBusy || (!form.gtin && !form.manufacturerCode)}>{imageBusy ? "Checking Icecat…" : "Find exact image"}</button></div></div>}
         <label>MRP (₹) *<input type="number" min="1" value={form.mrp} onChange={e => setForm({ ...form, mrp: e.target.value })} inputMode="numeric" required /></label>
         <label>Selling price (₹) *<input type="number" min="1" value={form.sellingPrice} onChange={e => setForm({ ...form, sellingPrice: e.target.value })} inputMode="numeric" required /></label>
         <label>Purchase price (private)<input type="number" min="0" value={form.purchasePrice} onChange={e => setForm({ ...form, purchasePrice: e.target.value })} inputMode="numeric" /></label>
