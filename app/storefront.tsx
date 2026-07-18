@@ -155,6 +155,7 @@ export default function Storefront() {
           <a href="#inventory" className="active">Inventory</a>
           <a href="#brands">Brands</a>
           <a href="#updates">Price updates</a>
+          <a href="https://github.com/shadababbas01/phone-stock-inventory/releases/download/android-latest/Mangla-Communication.apk" target="_blank" rel="noreferrer">Download App</a>
         </nav>
         <div className="header-actions">
           <a className="header-whatsapp" href={`https://wa.me/917011693657?text=${encodeURIComponent("is this device in stock?")}`} target="_blank" rel="noreferrer" aria-label="Chat with Mangla Communication on WhatsApp"><WhatsAppIcon /><span>WhatsApp</span></a>
@@ -168,7 +169,6 @@ export default function Storefront() {
           <p className="hero-kicker">Mangla Communication · Real-time stock</p>
           <h1><span>Live</span> phone inventory</h1>
           <p className="hero-subtitle">Real-time stock. Best prices. Trusted service.</p>
-          <a className="download-app-cta" href="https://github.com/shadababbas01/phone-stock-inventory/releases/download/android-latest/Mangla-Communication.apk" target="_blank" rel="noreferrer" aria-label="Download the Mangla Communication Android app"><span aria-hidden="true">↓</span> Download App</a>
           <label className="search-box">
             <SearchIcon />
             <span className="sr-only">Search phones</span>
