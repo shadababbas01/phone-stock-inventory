@@ -5,8 +5,18 @@ import { money, type PhoneVariant } from "@/lib/catalog";
 import { sampleAdminInventory } from "@/lib/admin-sample";
 
 type Tab = "inventory" | "stock" | "reports" | "suppliers" | "settings";
+type DeviceOptions = {
+  brands: string[];
+  models: string[];
+  colours: string[];
+  ramGb: number[];
+  storageGb: number[];
+  exactMatch: boolean;
+  source: "catalog" | "saved" | "internet";
+};
 
-const emptyForm = { brand: "", model: "", sku: "", ramGb: "8", storageGb: "128", colour: "", colourHex: "#a9c4d4", condition: "New", networkType: "5G", mrp: "", sellingPrice: "", purchasePrice: "", minimumSellingPrice: "", availableStock: "0", reorderLevel: "2", imageUrl: "/phones/phone-silver.webp" };
+const emptyOptions: DeviceOptions = { brands: [], models: [], colours: [], ramGb: [], storageGb: [], exactMatch: false, source: "catalog" };
+const emptyForm = { brand: "", model: "", ramGb: "8", storageGb: "128", colour: "", networkType: "5G", mrp: "", sellingPrice: "", purchasePrice: "", availableStock: "0", reorderLevel: "2", imageUrl: "/phones/phone-silver.webp" };
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return <span className="brand-lockup"><span className="logo-mark"><span>₹</span></span><span>Mangla {!compact && <em>Communication</em>}</span></span>;
@@ -26,6 +36,8 @@ export default function AdminApp() {
   const [form, setForm] = useState(emptyForm);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [deviceOptions, setDeviceOptions] = useState<DeviceOptions>(emptyOptions);
+  const [suggestionsBusy, setSuggestionsBusy] = useState(false);
 
   const loadInventory = async () => {
     const response = await fetch("/api/admin/inventory", { cache: "no-store" });
@@ -54,6 +66,34 @@ export default function AdminApp() {
     const timer = setTimeout(() => setNotice(""), 2600);
     return () => clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    if (!modalOpen || !authenticated) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSuggestionsBusy(true);
+      try {
+        const params = new URLSearchParams({ brand: form.brand, q: form.model, model: form.model });
+        const response = await fetch(`/api/admin/device-suggestions?${params}`, { cache: "no-store", signal: controller.signal });
+        if (!response.ok) return;
+        const data = await response.json() as DeviceOptions;
+        setDeviceOptions(data);
+        if (data.exactMatch) {
+          setForm(current => ({
+            ...current,
+            ramGb: data.ramGb.includes(Number(current.ramGb)) ? current.ramGb : String(data.ramGb[0] ?? current.ramGb),
+            storageGb: data.storageGb.includes(Number(current.storageGb)) ? current.storageGb : String(data.storageGb[0] ?? current.storageGb),
+            colour: data.colours.includes(current.colour) ? current.colour : (data.colours[0] ?? current.colour)
+          }));
+        }
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) setDeviceOptions(emptyOptions);
+      } finally {
+        if (!controller.signal.aborted) setSuggestionsBusy(false);
+      }
+    }, 250);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [authenticated, modalOpen, form.brand, form.model]);
 
   async function login(event: FormEvent) {
     event.preventDefault();
@@ -87,7 +127,7 @@ export default function AdminApp() {
 
   async function createItem(event: FormEvent) {
     event.preventDefault();
-    const ok = await mutate({ action: "create", ...form, ramGb: Number(form.ramGb), storageGb: Number(form.storageGb), mrp: Number(form.mrp), sellingPrice: Number(form.sellingPrice), purchasePrice: Number(form.purchasePrice), minimumSellingPrice: Number(form.minimumSellingPrice), availableStock: Number(form.availableStock), reorderLevel: Number(form.reorderLevel) });
+    const ok = await mutate({ action: "create", ...form, ramGb: Number(form.ramGb), storageGb: Number(form.storageGb), mrp: Number(form.mrp), sellingPrice: Number(form.sellingPrice), purchasePrice: Number(form.purchasePrice), availableStock: Number(form.availableStock), reorderLevel: Number(form.reorderLevel) });
     if (ok) { setModalOpen(false); setForm(emptyForm); }
   }
 
@@ -192,7 +232,18 @@ export default function AdminApp() {
       </div>
 
       {modalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setModalOpen(false); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="add-phone-title"><div className="modal-header"><h2 id="add-phone-title">Add exact phone variant</h2><button onClick={() => setModalOpen(false)} aria-label="Close">×</button></div><form className="inventory-form" onSubmit={createItem}><div className="form-grid">
-        <label>Brand *<input value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} required /></label><label>Model *<input value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} required /></label><label>SKU<input value={form.sku} onChange={e => setForm({ ...form, sku: e.target.value })} placeholder="Auto-generated if blank" /></label><label>Condition<select value={form.condition} onChange={e => setForm({ ...form, condition: e.target.value })}><option>New</option><option>Open-box</option><option>Used</option><option>Refurbished</option></select></label><label>RAM (GB) *<input type="number" min="1" value={form.ramGb} onChange={e => setForm({ ...form, ramGb: e.target.value })} required /></label><label>Storage (GB) *<input type="number" min="1" value={form.storageGb} onChange={e => setForm({ ...form, storageGb: e.target.value })} required /></label><label>Colour *<input value={form.colour} onChange={e => setForm({ ...form, colour: e.target.value })} required /></label><label>Colour code<input type="color" value={form.colourHex} onChange={e => setForm({ ...form, colourHex: e.target.value })} /></label><label>MRP (₹) *<input type="number" min="1" value={form.mrp} onChange={e => setForm({ ...form, mrp: e.target.value })} required /></label><label>Selling price (₹) *<input type="number" min="1" value={form.sellingPrice} onChange={e => setForm({ ...form, sellingPrice: e.target.value })} required /></label><label>Purchase price (private)<input type="number" min="0" value={form.purchasePrice} onChange={e => setForm({ ...form, purchasePrice: e.target.value })} /></label><label>Minimum price (private)<input type="number" min="0" value={form.minimumSellingPrice} onChange={e => setForm({ ...form, minimumSellingPrice: e.target.value })} /></label><label>Opening stock<input type="number" min="0" value={form.availableStock} onChange={e => setForm({ ...form, availableStock: e.target.value })} /></label><label>Low-stock level<input type="number" min="0" value={form.reorderLevel} onChange={e => setForm({ ...form, reorderLevel: e.target.value })} /></label>
+        <label>Brand *<input list="phone-brand-options" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value, model: "", colour: "" })} placeholder="Start typing, e.g. Sam" autoComplete="off" required /><datalist id="phone-brand-options">{deviceOptions.brands.map(brand => <option key={brand} value={brand} />)}</datalist></label>
+        <label>Model *<input list="phone-model-options" value={form.model} onChange={e => setForm({ ...form, model: e.target.value, colour: "" })} placeholder={form.brand ? "Type S, A, iPhone…" : "Choose brand first"} autoComplete="off" disabled={!form.brand} required /><datalist id="phone-model-options">{deviceOptions.models.map(model => <option key={model} value={model} />)}</datalist></label>
+        <label>RAM (GB) *<input list="phone-ram-options" type="number" min="1" value={form.ramGb} onChange={e => setForm({ ...form, ramGb: e.target.value })} inputMode="numeric" required /><datalist id="phone-ram-options">{deviceOptions.ramGb.map(value => <option key={value} value={value} />)}</datalist></label>
+        <label>Storage (GB) *<input list="phone-storage-options" type="number" min="1" value={form.storageGb} onChange={e => setForm({ ...form, storageGb: e.target.value })} inputMode="numeric" required /><datalist id="phone-storage-options">{deviceOptions.storageGb.map(value => <option key={value} value={value} />)}</datalist></label>
+        <label>Colour *<input list="phone-colour-options" value={form.colour} onChange={e => setForm({ ...form, colour: e.target.value })} placeholder={form.model ? "Choose official colour" : "Choose model first"} autoComplete="off" disabled={!form.model} required /><datalist id="phone-colour-options">{deviceOptions.colours.map(colour => <option key={colour} value={colour} />)}</datalist></label>
+        <label>Network<select value={form.networkType} onChange={e => setForm({ ...form, networkType: e.target.value })}><option>5G</option><option>4G</option><option>3G</option></select></label>
+        <p className="suggestion-status full" aria-live="polite">{suggestionsBusy ? "Finding matching phones and variants…" : deviceOptions.exactMatch ? `Variant choices ready · ${deviceOptions.source === "internet" ? "live device catalogue" : deviceOptions.source === "saved" ? "your saved stock" : "built-in catalogue"}` : "Type or tap a suggestion. You can still enter a model manually."}</p>
+        <label>MRP (₹) *<input type="number" min="1" value={form.mrp} onChange={e => setForm({ ...form, mrp: e.target.value })} inputMode="numeric" required /></label>
+        <label>Selling price (₹) *<input type="number" min="1" value={form.sellingPrice} onChange={e => setForm({ ...form, sellingPrice: e.target.value })} inputMode="numeric" required /></label>
+        <label>Purchase price (private)<input type="number" min="0" value={form.purchasePrice} onChange={e => setForm({ ...form, purchasePrice: e.target.value })} inputMode="numeric" /></label>
+        <label>Opening stock<input type="number" min="0" value={form.availableStock} onChange={e => setForm({ ...form, availableStock: e.target.value })} inputMode="numeric" /></label>
+        <label>Low-stock level<input type="number" min="0" value={form.reorderLevel} onChange={e => setForm({ ...form, reorderLevel: e.target.value })} inputMode="numeric" /></label>
       </div><div className="form-actions"><button type="button" className="secondary-btn" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary-btn" disabled={busy}>{busy ? "Saving…" : "Save phone variant"}</button></div></form></div></div>}
       {notice && <div className="toast" role="status">{notice}</div>}
     </main>
