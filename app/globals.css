@@ -272,3 +272,148 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* Platform-adaptive mobile app shell */
+.mobile-tabbar { display: none; }
+:focus-visible { outline: 3px solid rgba(21,122,110,.36); outline-offset: 3px; }
+
+html[data-platform="ios"] body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+html[data-platform="android"] body {
+  font-family: Roboto, "Segoe UI", system-ui, sans-serif;
+}
+html[data-platform="android"] button:active,
+html[data-platform="android"] a:active {
+  transform: scale(.97);
+}
+html[data-platform="ios"] button,
+html[data-platform="ios"] select,
+html[data-platform="ios"] input {
+  font-size: max(16px, 1em);
+}
+
+@media (max-width: 760px) {
+  html { scroll-padding-top: calc(78px + env(safe-area-inset-top)); }
+  body { overscroll-behavior-y: none; }
+  .storefront-shell { min-height: 100dvh; padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
+  .site-header {
+    height: calc(64px + env(safe-area-inset-top));
+    min-height: calc(64px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+  .brand-lockup { font-size: 16px; letter-spacing: -.2px; }
+  .brand-lockup em { display: inline; }
+  .site-header .logo-mark { transform: scale(.66); margin: -7px; }
+  .hero { padding-top: 24px; }
+  .hero h1 { font-size: clamp(32px, 10vw, 40px); }
+  .search-box { border-radius: 18px; }
+  .product-card { touch-action: manipulation; }
+  .whatsapp-btn, .share-btn, .mobile-filter-button { min-height: 46px; }
+  .toast { bottom: calc(86px + env(safe-area-inset-bottom)); width: max-content; max-width: calc(100% - 32px); text-align: center; }
+  .mobile-tabbar {
+    position: fixed;
+    z-index: 70;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 7px max(8px, env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    background: rgba(255,253,248,.96);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -8px 26px rgba(49,32,20,.1);
+    backdrop-filter: blur(22px) saturate(1.3);
+  }
+  .mobile-tabbar a, .mobile-tabbar button {
+    min-width: 0;
+    min-height: 50px;
+    border: 0;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #75665e;
+    cursor: pointer;
+  }
+  .mobile-tabbar span { font-size: 21px; line-height: 1; }
+  .mobile-tabbar b { font-size: 10px; line-height: 1.1; }
+  .mobile-tabbar .active { color: var(--saffron-dark); }
+  .admin-topbar {
+    height: calc(68px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .login-page { padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+}
+
+@media (max-width: 760px) {
+  html[data-platform="android"] .site-header {
+    background: #fffdf8;
+    border-bottom: 0;
+    box-shadow: 0 3px 10px rgba(49,32,20,.12);
+  }
+  html[data-platform="android"] .product-card,
+  html[data-platform="android"] .stats-strip,
+  html[data-platform="android"] .filter-selects { border-radius: 20px; }
+  html[data-platform="android"] .brand-chips button.selected,
+  html[data-platform="android"] .primary-btn {
+    box-shadow: 0 3px 7px rgba(201,111,0,.28);
+  }
+  html[data-platform="android"] .mobile-tabbar {
+    background: #fffdf8;
+    padding-top: 5px;
+  }
+  html[data-platform="android"] .mobile-tabbar .active span {
+    min-width: 52px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #f8dfbc;
+  }
+}
+
+@media (max-width: 760px) {
+  html[data-platform="ios"] .site-header {
+    background: rgba(255,253,248,.78);
+    border-bottom-color: rgba(117,102,94,.16);
+    backdrop-filter: blur(28px) saturate(1.8);
+  }
+  html[data-platform="ios"] .hero {
+    background-image: linear-gradient(180deg, rgba(255,255,255,.5), transparent), radial-gradient(circle at 20% 20%, rgba(233,149,36,.12), transparent 32%);
+  }
+  html[data-platform="ios"] .search-box {
+    height: 52px;
+    border: 0;
+    background: rgba(118,118,128,.11);
+    box-shadow: none;
+  }
+  html[data-platform="ios"] .product-card {
+    border-radius: 24px;
+    box-shadow: 0 8px 28px rgba(81,55,35,.1);
+  }
+  html[data-platform="ios"] .brand-chips button,
+  html[data-platform="ios"] .mobile-filter-button,
+  html[data-platform="ios"] .filter-selects,
+  html[data-platform="ios"] .catalog-toolbar label {
+    border-radius: 14px;
+  }
+  html[data-platform="ios"] .mobile-tabbar {
+    background: rgba(249,249,249,.78);
+    border-top-color: rgba(60,60,67,.2);
+    backdrop-filter: blur(28px) saturate(1.8);
+  }
+  html[data-platform="ios"] .mobile-tabbar .active { color: #d87500; }
+  html[data-platform="ios"] .mobile-tabbar b { font-weight: 600; }
+}
+
+@media (display-mode: standalone) and (max-width: 760px) {
+  .site-header { position: sticky; }
+  .hero-kicker::after { content: " · App mode"; }
+}
