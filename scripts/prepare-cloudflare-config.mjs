@@ -7,7 +7,7 @@ const sourcePath = new URL("../dist/server/wrangler.json", import.meta.url);
 const targetPath = new URL("../wrangler.deploy.json", import.meta.url);
 const config = JSON.parse(await readFile(sourcePath, "utf8"));
 
-config.name = "phone-stock-inventory";
+config.name = "manglacom";
 config.main = "dist/server/index.js";
 config.assets = { directory: "dist/client" };
 delete config.build;
