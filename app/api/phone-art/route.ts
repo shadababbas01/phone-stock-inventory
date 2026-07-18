@@ -18,13 +18,13 @@ export async function GET(request: Request) {
   <title id="title">${brand} ${model} in ${colour}</title>
   <description id="description">Automatically generated illustrative catalogue artwork</description>
   <defs>
-    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffaf1"/><stop offset="1" stop-color="#f2e7d8"/></linearGradient>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#111417"/><stop offset="1" stop-color="#1d2227"/></linearGradient>
     <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".38"/><stop offset=".42" stop-color="${body}"/><stop offset="1" stop-color="#111" stop-opacity=".25"/></linearGradient>
     <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17243a"/><stop offset=".55" stop-color="#40697d"/><stop offset="1" stop-color="#d99a36"/></linearGradient>
     <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="18" stdDeviation="17" flood-color="#5c3d1e" flood-opacity=".2"/></filter>
   </defs>
   <rect width="640" height="560" rx="38" fill="url(#background)"/>
-  <ellipse cx="320" cy="458" rx="208" ry="30" fill="#6c4c2d" opacity=".14"/>
+  <ellipse cx="320" cy="458" rx="208" ry="30" fill="#000" opacity=".34"/>
   <g filter="url(#shadow)">
     <g transform="translate(120 68) rotate(-8 135 184)">
       <rect width="246" height="390" rx="38" fill="url(#body)" stroke="#fff" stroke-opacity=".55" stroke-width="3"/>
@@ -41,8 +41,8 @@ export async function GET(request: Request) {
       <path d="M24 245 C100 158 153 215 228 105" fill="none" stroke="#fff" stroke-opacity=".26" stroke-width="4"/>
     </g>
   </g>
-  <text x="320" y="506" text-anchor="middle" font-family="system-ui,sans-serif" font-size="20" font-weight="800" fill="#49321e">${brand} ${model}</text>
-  <text x="320" y="532" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#806c5d">${colour} · Illustrative image</text>
+  <text x="320" y="506" text-anchor="middle" font-family="system-ui,sans-serif" font-size="20" font-weight="800" fill="#f5f5f4">${brand} ${model}</text>
+  <text x="320" y="532" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#9ca3aa">${colour} · Illustrative image</text>
 </svg>`;
 
   return new Response(svg, {
