@@ -14,14 +14,17 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#fff8ed",
+  themeColor: "#07090b",
   viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <body>
+        <script dangerouslySetInnerHTML={{ __html: `try{const t=localStorage.getItem('mangla-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch{}` }} />
+        {children}
+      </body>
     </html>
   );
 }
