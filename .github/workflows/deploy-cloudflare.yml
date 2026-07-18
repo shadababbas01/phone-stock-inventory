@@ -21,6 +21,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       MOBILE_API_KEY: ${{ secrets.MOBILE_API_KEY }}
+      ICECAT_SHOPNAME: ${{ secrets.ICECAT_SHOPNAME }}
 
     steps:
       - name: Check out source
@@ -43,6 +44,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -n "$ADMIN_PASSWORD"
+          test -n "$ICECAT_SHOPNAME"
 
       - name: Lint and test
         run: npm run lint && npm test
@@ -86,7 +88,7 @@ jobs:
       - name: Deploy application
         run: npx wrangler deploy --config wrangler.deploy.json
 
-      - name: Install admin authentication secrets
+      - name: Install application secrets
         run: |
           node scripts/generate-cloudflare-secrets.mjs > /tmp/cloudflare-secrets.json
           npx wrangler secret bulk /tmp/cloudflare-secrets.json --config wrangler.deploy.json
