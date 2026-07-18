@@ -48,23 +48,27 @@ function capacities(value: unknown) {
 function normalizeInternet(payload: unknown, brand: string, model: string): Partial<Suggestions> {
   const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
   const candidates = [record.data, record.results, record.devices, payload].find(Array.isArray);
-  const devices = Array.isArray(candidates) ? candidates : [];
-  const selected = devices.find(item => {
-    if (!item || typeof item !== "object") return false;
-    const device = item as Record<string, unknown>;
-    return String(device.name ?? device.model ?? "").toLowerCase() === model.toLowerCase();
-  });
+  const single = record.data && typeof record.data === "object" && !Array.isArray(record.data)
+    ? record.data as Record<string, unknown>
+    : record;
+  const devices: unknown[] = Array.isArray(candidates)
+    ? candidates
+    : (single.name || single.model ? [single] : []);
   const rows = devices.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"));
-  const exact = selected && typeof selected === "object" ? selected as Record<string, unknown> : undefined;
-  const hardware = exact?.hardware && typeof exact.hardware === "object" ? exact.hardware as Record<string, unknown> : {};
+  const selected = rows.find(device => String(device.name ?? device.model ?? "").toLowerCase() === model.toLowerCase());
+  const exact = selected ?? (rows.length === 1 ? rows[0] : undefined);
+  const hardware = exact?.hardware;
+  const ramSource = hardware && typeof hardware === "object"
+    ? (hardware as Record<string, unknown>).ram
+    : hardware;
 
   return {
     brands: uniqueText(rows.map(device => device.brand_name ?? device.brand).filter(Boolean)),
     models: uniqueText(rows.filter(device => !brand || String(device.brand_name ?? device.brand ?? "").toLowerCase().includes(brand.toLowerCase())).map(device => device.name ?? device.model)),
     colours: uniqueText(list(exact?.colors ?? exact?.colours)),
-    ramGb: capacities(hardware.ram ?? exact?.ram ?? exact?.memory),
+    ramGb: capacities(ramSource ?? exact?.ram ?? exact?.memory),
     storageGb: capacities(exact?.storage ?? exact?.storages),
-    exactMatch: Boolean(exact)
+    exactMatch: Boolean(selected)
   };
 }
 
