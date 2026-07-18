@@ -1,5 +1,7 @@
 # PhoneStock Inventory
 
+[![Deploy to Cloudflare](https://github.com/shadababbas01/phone-stock-inventory/actions/workflows/deploy-cloudflare.yml/badge.svg)](https://github.com/shadababbas01/phone-stock-inventory/actions/workflows/deploy-cloudflare.yml)
+
 A mobile-first phone inventory and public price catalogue for retail shops. Customers can view exact RAM, storage, colour, price and availability through a shareable link. An authenticated administrator can manage stock, prices, private costs, imports and reports.
 
 ## Included
