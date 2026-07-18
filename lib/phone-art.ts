@@ -3,6 +3,7 @@ type PhoneArtDetails = {
   model: string;
   colour: string;
   colourHex?: string;
+  imageUrl?: string;
 };
 
 const colourKeywords: Array<[RegExp, string]> = [
@@ -23,7 +24,19 @@ export function colourToHex(colour: string, supplied?: string) {
   return colourKeywords.find(([pattern]) => pattern.test(colour))?.[1] ?? "#8799a6";
 }
 
+export function isTrustedPhoneImageUrl(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return false;
+  if (value.startsWith("/")) return !value.startsWith("//");
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && (url.hostname === "icecat.biz" || url.hostname.endsWith(".icecat.biz"));
+  } catch {
+    return false;
+  }
+}
+
 export function phoneArtUrl(phone: PhoneArtDetails) {
+  if (isTrustedPhoneImageUrl(phone.imageUrl)) return phone.imageUrl as string;
   const params = new URLSearchParams({
     brand: phone.brand,
     model: phone.model,
