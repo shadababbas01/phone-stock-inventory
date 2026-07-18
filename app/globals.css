@@ -209,6 +209,8 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
 .variant-art-preview strong, .variant-art-preview span { display: block; }
 .variant-art-preview strong { margin-bottom: 5px; color: #49382f; font-size: 13px; }
 .variant-art-preview span { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.image-lookup-btn { margin-top: 8px; padding: 7px 10px; border: 1px solid #d5b995; border-radius: 8px; background: #fff7eb; color: #8f4e08; font-size: 11px; font-weight: 800; cursor: pointer; }
+.image-lookup-btn:disabled { opacity: .55; cursor: not-allowed; }
 .form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
 
 @media (max-width: 1100px) {
@@ -669,6 +671,7 @@ footer a { color: #f0a04d; }
 .suggestion-status { color: #66dfa0; background: rgba(25,200,99,.09); border: 1px solid rgba(25,200,99,.16); }
 .variant-art-preview { color: #e8eaec; background: #15191d; border-color: #343a40; }
 .variant-art-preview strong { color: #f2f3f4; }
+.image-lookup-btn { color: #ffc170; background: #1c1712; border-color: #5a4632; }
 
 @media (max-width: 760px) {
   .container { width: min(100% - 24px, 680px); }
@@ -794,6 +797,7 @@ html[data-theme="light"] .admin-table td { border-color: #eadfd3; }
 html[data-theme="light"] .panel-tools input,
 html[data-theme="light"] .form-grid input,
 html[data-theme="light"] .form-grid select { color: #2b221c; background-color: #fff; border-color: #d8cabb; }
+html[data-theme="light"] .image-lookup-btn { color: #8f4e08; background: #fff7eb; border-color: #d5b995; }
 html[data-theme="light"] .login-page { background: radial-gradient(circle at 50% 8%, rgba(227,139,53,.17), transparent 32%), #f7efe5; }
 html[data-theme="light"] .login-card,
 html[data-theme="light"] .modal { color: #2b221c; background: #fffdf9; border-color: #ded2c3; }
