@@ -9,7 +9,7 @@ type Tab = "inventory" | "stock" | "reports" | "suppliers" | "settings";
 const emptyForm = { brand: "", model: "", sku: "", ramGb: "8", storageGb: "128", colour: "", colourHex: "#a9c4d4", condition: "New", networkType: "5G", mrp: "", sellingPrice: "", purchasePrice: "", minimumSellingPrice: "", availableStock: "0", reorderLevel: "2", imageUrl: "/phones/phone-silver.webp" };
 
 function Brand({ compact = false }: { compact?: boolean }) {
-  return <span className="brand-lockup"><span className="logo-mark"><span>₹</span></span><span>PhoneStock {!compact && <em>Inventory</em>}</span></span>;
+  return <span className="brand-lockup"><span className="logo-mark"><span>₹</span></span><span>Mangla {!compact && <em>Communication</em>}</span></span>;
 }
 
 export default function AdminApp() {
@@ -119,7 +119,7 @@ export default function AdminApp() {
     const fields = ["Brand", "Model", "SKU", "RAM GB", "Storage GB", "Colour", "Condition", "MRP", "Selling Price", "Stock", "Reserved"];
     const rows = inventory.map(p => [p.brand, p.model, p.sku ?? "", p.ramGb, p.storageGb, p.colour, p.condition, p.mrp, p.sellingPrice, p.availableStock, p.reservedStock]);
     const csv = [fields, ...rows].map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
-    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); link.download = `phonestock-inventory-${new Date().toISOString().slice(0,10)}.csv`; link.click(); URL.revokeObjectURL(link.href);
+    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); link.download = `mangla-communication-inventory-${new Date().toISOString().slice(0,10)}.csv`; link.click(); URL.revokeObjectURL(link.href);
   }
 
   async function importCsv(event: ChangeEvent<HTMLInputElement>) {
