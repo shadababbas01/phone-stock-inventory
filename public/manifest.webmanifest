@@ -1,10 +1,36 @@
 {
-  "name": "PhoneStock Inventory",
-  "short_name": "PhoneStock",
-  "description": "Live phone stock and price catalogue",
+  "id": "/",
+  "name": "Mangla Communication",
+  "short_name": "Mangla",
+  "description": "Live phone stock, exact variants and transparent prices",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#fff8ed",
   "theme_color": "#e99524",
-  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "categories": [
+    "shopping",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse phones",
+      "short_name": "Phones",
+      "url": "/#inventory"
+    },
+    {
+      "name": "Admin inventory",
+      "short_name": "Admin",
+      "url": "/admin"
+    }
+  ]
 }
