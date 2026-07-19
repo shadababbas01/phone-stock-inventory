@@ -675,9 +675,12 @@ footer a { color: #f0a04d; }
 
 @media (max-width: 760px) {
   .container { width: min(100% - 24px, 680px); }
-  .site-header { background: rgba(7,9,11,.92) !important; border-bottom: 1px solid #282d32 !important; box-shadow: 0 8px 24px rgba(0,0,0,.3) !important; }
-  .site-header .brand-logo { width: 190px; height: 54px; filter: brightness(1.9) sepia(.2); }
-  .header-actions { gap: 5px; }
+  .site-header { height: auto; min-height: 110px; grid-template-columns: 1fr auto; grid-template-rows: 68px 42px; padding: 0 12px; background: rgba(7,9,11,.92) !important; border-bottom: 1px solid #282d32 !important; box-shadow: 0 8px 24px rgba(0,0,0,.3) !important; }
+  .site-header > .brand-lockup { grid-column: 1; grid-row: 1; }
+  .site-header .brand-logo { width: 164px; height: 52px; filter: brightness(1.9) sepia(.2); }
+  .site-header nav { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(4, auto); align-items: stretch; justify-content: space-between; width: calc(100% + 24px); height: 42px; margin-left: -12px; padding: 0 12px; gap: 4px; border-top: 1px solid #242a2f; overflow: hidden; }
+  .site-header nav a { height: 42px; padding: 0 4px; white-space: nowrap; font-size: 10.5px; }
+  .header-actions { grid-column: 2; grid-row: 1; gap: 5px; }
   .header-whatsapp, .theme-toggle { min-height: 38px; width: 38px; padding: 0; }
   .header-whatsapp span, .admin-link { font-size: 0; }
   .header-whatsapp svg { width: 20px; height: 20px; }
@@ -808,6 +811,7 @@ html[data-theme="light"] .form-grid label { color: #594d44; }
 
 @media (max-width: 760px) {
   html[data-theme="light"] .site-header { background: rgba(255,252,247,.92) !important; border-bottom-color: #ded2c3 !important; box-shadow: 0 7px 22px rgba(69,48,31,.1) !important; }
+  html[data-theme="light"] .site-header nav { border-top-color: #e4d8ca; }
   html[data-theme="light"] .hero { background: radial-gradient(circle at 80% 4%, rgba(227,139,53,.12), transparent 30%), linear-gradient(180deg, #fffaf2, #f4e8d8) !important; border-bottom-color: #ded2c3 !important; }
   html[data-theme="light"] .admin-link { color: #332a24 !important; background: #fff !important; border-color: #ddcdbb !important; }
   html[data-theme="light"] .search-box { background: #fff !important; border-color: #cf8d4d !important; }
