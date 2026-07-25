@@ -13,12 +13,11 @@ function SearchIcon() {
 }
 
 function WhatsAppIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.5 3.5A11.8 11.8 0 0 0 12.1 0C5.6 0 .3 5.3.3 11.8c0 2.1.5 4.1 1.6 5.9L0 24l6.5-1.7a12 12 0 0 0 5.6 1.4h.1c6.5 0 11.8-5.3 11.8-11.8 0-3.2-1.2-6.1-3.5-8.4Zm-8.4 18.2c-1.7 0-3.4-.5-4.9-1.4l-.4-.2-3.9 1 1-3.8-.2-.4a9.8 9.8 0 1 1 8.4 4.8Zm5.4-7.3c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.2-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-1.8-.9-3-1.6-4.2-3.7-.3-.5.3-.5.9-1.7.1-.2 0-.4 0-.6l-.9-2.1c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.3 1.4 3.5c.1.2 2.4 3.7 5.8 5.2 2.2.9 3 .9 4.1.8.7-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg>;
+  return <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93a7.898 7.898 0 0 0-2.327-5.607ZM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.25a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592Zm3.615-4.934c-.198-.099-1.17-.578-1.352-.642-.182-.066-.315-.099-.445.099-.133.198-.513.642-.627.775-.116.133-.232.148-.43.05-.198-.1-.836-.308-1.592-.984-.59-.525-.986-1.173-1.102-1.371-.116-.198-.013-.305.087-.404.09-.088.198-.232.297-.348.1-.116.133-.198.198-.33.066-.134.033-.249-.016-.348-.05-.099-.445-1.074-.611-1.47-.161-.389-.324-.336-.445-.342-.116-.007-.248-.007-.38-.007a.729.729 0 0 0-.529.248c-.182.198-.694.678-.694 1.654s.71 1.916.81 2.049c.098.132 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.151.907.129 1.249.078.38-.058 1.171-.48 1.338-.943.164-.462.164-.86.116-.943-.05-.084-.182-.133-.38-.232Z"/></svg>;
 }
 
 function ProductCard({ phone }: { phone: PhoneVariant }) {
   const available = Math.max(0, phone.availableStock - phone.reservedStock);
-  const savings = phone.mrp - phone.sellingPrice;
   const shareText = `${phone.brand} ${phone.model} · ${phone.ramGb}GB/${phone.storageGb}GB · ${phone.colour} · ${money(phone.sellingPrice)} · ${available > 0 ? `${available} available` : "Out of stock"}`;
   const productUrl = `${publicStoreUrl}/?phone=${phone.slug}`;
   const whatsappText = `Is this device in stock?\n\n${shareText}\n${productUrl}`;
@@ -37,29 +36,26 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
       <div className="product-image-wrap">
         <img src={artwork} alt={`${phone.colour} ${phone.brand} ${phone.model}`} className="product-image" />
         <span className="network-badge">{phone.networkType}</span>
-        <span className="illustration-badge">{phone.imageUrl?.includes("icecat.biz") ? "Product image" : "Illustrative image"}</span>
       </div>
       <div className="product-content">
         <p className="eyebrow" title={phone.brand}>{phone.brand}</p>
         <h2 title={phone.model}>{phone.model}</h2>
-        <div className="price-rule" />
         <p className="selling-price">{money(phone.sellingPrice)}</p>
-        <p className="mrp">MRP <s>{money(phone.mrp)}</s> <strong>Save {money(savings)}</strong></p>
+        <p className="mrp">MRP <s>{money(phone.mrp)}</s></p>
         <span className={`stock-pill ${available === 0 ? "out" : available <= phone.reorderLevel ? "low" : ""}`}>
           {available === 0 ? "Out of stock" : `${available} in stock`}
         </span>
         <div className="spec-grid" aria-label={`${phone.model} specifications`}>
-          <div><strong title={`${phone.ramGb}GB RAM`}>{phone.ramGb}GB</strong><span>RAM</span></div>
-          <div><strong title={`${phone.storageGb}GB Storage`}>{phone.storageGb}GB</strong><span>Storage</span></div>
-          <div><strong title={phone.colour}><i style={{ background: phone.colourHex }} />{phone.colour}</strong><span>Colour</span></div>
+          <div><strong title={`${phone.ramGb}GB RAM`}>{phone.ramGb}GB RAM</strong></div>
+          <div><strong title={`${phone.storageGb}GB Storage`}>{phone.storageGb}GB</strong></div>
+          <div><strong title={phone.colour}><i style={{ background: phone.colourHex }} />{phone.colour}</strong></div>
         </div>
         <div className="card-actions">
           <a className="whatsapp-btn" href={`https://wa.me/917011693657?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noreferrer" aria-label={`Ask Mangla Communication about ${phone.model} on WhatsApp`}>
             <WhatsAppIcon /> WhatsApp
           </a>
-          <button className="share-btn" onClick={share} aria-label={`Share ${phone.model}`} title="Share product">↗</button>
+          <button className="share-btn" onClick={share} aria-label={`Share ${phone.model}`} title="Share product">›</button>
         </div>
-        <p className="updated"><span aria-hidden="true">◷</span> Updated {phone.updatedAt.toLowerCase()}</p>
       </div>
     </article>
   );
@@ -68,7 +64,7 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
 export default function Storefront() {
   const [inventory, setInventory] = useState<PhoneVariant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState("All phones");
   const [ram, setRam] = useState("All");
@@ -106,7 +102,7 @@ export default function Storefront() {
 
   useEffect(() => {
     const saved = localStorage.getItem("mangla-theme");
-    const initial = saved === "light" || saved === "dark" ? saved : "dark";
+    const initial = saved === "light" || saved === "dark" ? saved : "light";
     queueMicrotask(() => setTheme(initial));
     document.documentElement.dataset.theme = initial;
   }, []);
@@ -140,9 +136,6 @@ export default function Storefront() {
 
   const brandOptions = useMemo(() => ["All phones", ...Array.from(new Set(inventory.map(phone => phone.brand))).sort()], [inventory]);
 
-  const totalAvailable = inventory.reduce((sum, p) => sum + Math.max(0, p.availableStock - p.reservedStock), 0);
-  const totalPhones = inventory.reduce((sum, p) => sum + Math.max(0, p.availableStock), 0);
-  const lowStock = inventory.filter(p => p.availableStock - p.reservedStock > 0 && p.availableStock - p.reservedStock <= p.reorderLevel).length;
   const clearFilters = () => { setBrand("All phones"); setRam("All"); setStorage("All"); setMaxPrice("All"); setInStock(false); setQuery(""); };
 
   return (
@@ -151,84 +144,62 @@ export default function Storefront() {
         <a href="#top" className="brand-lockup" aria-label="Mangla Communication home">
           <img src="/mangla-logo.svg" alt="Mangla Communication" className="brand-logo" />
         </a>
-        <nav aria-label="Primary navigation">
-          <a href="#inventory" className="active">Inventory</a>
-          <a href="#brands">Brands</a>
-          <a href="#updates">Price updates</a>
-          <a href="https://github.com/shadababbas01/phone-stock-inventory/releases/download/android-latest/Mangla-Communication.apk" target="_blank" rel="noreferrer">Download App</a>
-        </nav>
         <div className="header-actions">
-          <a className="header-whatsapp" href={`https://wa.me/917011693657?text=${encodeURIComponent("is this device in stock?")}`} target="_blank" rel="noreferrer" aria-label="Chat with Mangla Communication on WhatsApp"><WhatsAppIcon /><span>WhatsApp</span></a>
-          <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}><span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span></button>
-          <a href="/admin" className="admin-link"><span aria-hidden="true">♙</span> Admin</a>
+          <a className="header-download" href="https://github.com/shadababbas01/phone-stock-inventory/releases/download/android-latest/Mangla-Communication.apk" target="_blank" rel="noreferrer" aria-label="Download Android app"><span aria-hidden="true">⇩</span><b>Download app</b></a>
+          <a className="header-whatsapp" href={`https://wa.me/917011693657?text=${encodeURIComponent("is this device in stock?")}`} target="_blank" rel="noreferrer" aria-label="Chat with Mangla Communication on WhatsApp" title="WhatsApp"><WhatsAppIcon /></a>
+          <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}><b aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</b></button>
+          <a href="/admin" className="admin-link" aria-label="Admin login" title="Admin login"><span aria-hidden="true">♙</span></a>
+        </div>
+        <div className="header-ticker" aria-label="Cheaper than Cheapest">
+          <div className="header-ticker-track">
+            <span>Cheaper than Cheapest&nbsp;&nbsp;•&nbsp;&nbsp;Cheaper than Cheapest&nbsp;&nbsp;•&nbsp;&nbsp;Cheaper than Cheapest&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+            <span aria-hidden="true">Cheaper than Cheapest&nbsp;&nbsp;•&nbsp;&nbsp;Cheaper than Cheapest&nbsp;&nbsp;•&nbsp;&nbsp;Cheaper than Cheapest&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+          </div>
         </div>
       </header>
 
       <section className="hero" id="top">
         <div className="container">
-          <p className="hero-kicker">Mangla Communication · Real-time stock</p>
-          <h1><span>Live</span> phone inventory</h1>
-          <p className="hero-subtitle">Real-time stock. Best prices. Trusted service.</p>
-          <label className="search-box">
-            <SearchIcon />
-            <span className="sr-only">Search phones</span>
-            <input id="catalog-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by brand, model, RAM, storage or colour" />
-            {query && <button onClick={() => setQuery("")} aria-label="Clear search">×</button>}
-          </label>
-          <div className="trust-row" aria-label="Store benefits">
-            <span><b>✓</b><strong>100% Original</strong><small>Official warranty</small></span>
-            <span><b>◷</b><strong>Live Inventory</strong><small>Real-time stock</small></span>
-            <span><b>₹</b><strong>Best Prices</strong><small>Updated regularly</small></span>
-            <span><b>✦</b><strong>Expert Support</strong><small>Buy with confidence</small></span>
+          <div className="search-row">
+            <label className="search-box">
+              <SearchIcon />
+              <span className="sr-only">Search phones</span>
+              <input id="catalog-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search phone by name or model" />
+              {query && <button onClick={() => setQuery("")} aria-label="Clear search">×</button>}
+            </label>
+            <button className="filter-trigger" type="button" onClick={() => setFiltersOpen(v => !v)} aria-expanded={filtersOpen}><span aria-hidden="true">▽</span> Filter</button>
+          </div>
+          <div className={`quick-filters ${filtersOpen ? "open" : ""}`} id="brands">
+            <div className="brand-chips" role="group" aria-label="Filter by brand">
+              {brands.map(item => <button key={item} className={brand === item ? "selected" : ""} onClick={() => setBrand(item)}>{item}</button>)}
+            </div>
+            <div className="filter-selects">
+              <label><span>Brand</span><select value={brand} onChange={e => setBrand(e.target.value)}>{brandOptions.map(item => <option key={item} value={item}>{item === "All phones" ? "All" : item}</option>)}</select></label>
+              <label><span>RAM</span><select value={ram} onChange={e => setRam(e.target.value)}><option>All</option><option>8</option><option>12</option><option>16</option></select></label>
+              <label><span>Storage</span><select value={storage} onChange={e => setStorage(e.target.value)}><option>All</option><option>128</option><option>256</option><option>512</option></select></label>
+              <label><span>Price</span><select value={maxPrice} onChange={e => setMaxPrice(e.target.value)}><option>All</option><option value="25000">Under ₹25k</option><option value="50000">Under ₹50k</option><option value="75000">Under ₹75k</option></select></label>
+              <label className="checkbox-filter"><input type="checkbox" checked={inStock} onChange={e => setInStock(e.target.checked)} /> In stock</label>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="catalog container" id="inventory">
-        <div className="filter-bar" id="brands">
-          <div className="brand-chips" role="group" aria-label="Filter by brand">
-            {brands.slice(0, 4).map(item => <button key={item} className={brand === item ? "selected" : ""} onClick={() => setBrand(item)}>{item}</button>)}
-          </div>
-          <button className="mobile-filter-button" onClick={() => setFiltersOpen(v => !v)} aria-expanded={filtersOpen}>Filters <span>▾</span></button>
-          <div className={`filter-selects ${filtersOpen ? "open" : ""}`}>
-            <label><span>Brand</span><select value={brand} onChange={e => setBrand(e.target.value)}>{brandOptions.map(item => <option key={item} value={item}>{item === "All phones" ? "All" : item}</option>)}</select></label>
-            <label><span>RAM</span><select value={ram} onChange={e => setRam(e.target.value)}><option>All</option><option>8</option><option>12</option><option>16</option></select></label>
-            <label><span>Storage</span><select value={storage} onChange={e => setStorage(e.target.value)}><option>All</option><option>128</option><option>256</option><option>512</option></select></label>
-            <label><span>Price</span><select value={maxPrice} onChange={e => setMaxPrice(e.target.value)}><option>All</option><option value="25000">Under ₹25k</option><option value="50000">Under ₹50k</option><option value="75000">Under ₹75k</option></select></label>
-            <label className="checkbox-filter"><input type="checkbox" checked={inStock} onChange={e => setInStock(e.target.checked)} /> In stock</label>
-          </div>
-        </div>
-
-        <div className="stats-strip" id="updates">
-          <div><span className="stat-icon amber">◇</span><p><strong>{totalPhones}</strong><span>Total phones</span></p></div>
-          <div><span className="stat-icon teal">◇</span><p><strong>{totalAvailable}</strong><span>Phones available</span></p></div>
-          <div><span className="stat-icon coral">◷</span><p><strong>{lowStock}</strong><span>Low-stock variants</span></p></div>
-          <div><span className="stat-icon amber">↗</span><p><strong>{inventory.filter(p => p.mrp > p.sellingPrice).length}</strong><span>Offers live</span></p></div>
-        </div>
-
         <div className="catalog-toolbar">
-          <div><h2>Available phones</h2><p>{filtered.length} exact variant{filtered.length === 1 ? "" : "s"} found</p></div>
-          <label>Sort by <select value={sort} onChange={e => setSort(e.target.value)}><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="stock">Most stock</option></select></label>
+          <div className="catalog-title"><h1>Phones</h1><span>{filtered.length}</span></div>
+          <label><span className="sr-only">Sort phones</span><select value={sort} onChange={e => setSort(e.target.value)}><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="stock">Most stock</option></select></label>
         </div>
 
-        {loading && !inventory.length ? <div className="inventory-loading" role="status"><span className="loading-spinner" /><strong>Loading live inventory…</strong><small>Your saved stock will appear here.</small></div> : filtered.length ? <div className="product-grid">{filtered.map(phone => <ProductCard key={phone.id} phone={phone} />)}</div> : (
-          <div className="empty-state"><span>⌕</span><h3>No exact variants found</h3><p>Try removing a filter or searching for another model.</p><button onClick={clearFilters}>Clear all filters</button></div>
+        {loading && !inventory.length ? <div className="inventory-loading" role="status"><span className="loading-spinner" /><strong>Loading inventory…</strong></div> : filtered.length ? <div className="product-grid">{filtered.map(phone => <ProductCard key={phone.id} phone={phone} />)}</div> : (
+          <div className="empty-state"><span>⌕</span><h3>No phones found</h3><button onClick={clearFilters}>Clear filters</button></div>
         )}
-
-        <div className="benefits-strip" aria-label="Purchase benefits">
-          <span><b>↻</b><strong>Easy replacement</strong><small>Shop support</small></span>
-          <span><b>▱</b><strong>Fast assistance</strong><small>Direct WhatsApp help</small></span>
-          <span><b>₹</b><strong>Payment options</strong><small>Ask about available modes</small></span>
-          <span><b>✓</b><strong>Best price</strong><small>Transparent pricing</small></span>
-        </div>
       </section>
 
-      <footer><div className="container"><div className="brand-lockup small"><img src="/mangla-logo.svg" alt="Mangla Communication" className="brand-logo" /></div><p>Prices and availability can change. Contact the shop to reserve a device.</p><a href="/admin">Shop administration</a></div></footer>
       <nav className="mobile-tabbar" aria-label="Mobile app navigation">
-        <a href="#top" className="active"><span aria-hidden="true">⌂</span><b>Home</b></a>
-        <button type="button" onClick={() => { document.getElementById("catalog-search")?.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span aria-hidden="true">⌕</span><b>Search</b></button>
-        <a href="#inventory"><span aria-hidden="true">▦</span><b>Phones</b></a>
-        <a href="/admin"><span aria-hidden="true">⚙</span><b>Admin</b></a>
+        <a href="#top" className="active" aria-label="Home"><span aria-hidden="true">⌂</span></a>
+        <button type="button" aria-label="Search" onClick={() => { document.getElementById("catalog-search")?.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span aria-hidden="true">⌕</span></button>
+        <a href="#inventory" aria-label="Phones"><span aria-hidden="true">▦</span></a>
+        <a href="/admin" aria-label="Admin"><span aria-hidden="true">⚙</span></a>
       </nav>
       {toast && <div className="toast" role="status">✓ {toast}</div>}
     </main>
