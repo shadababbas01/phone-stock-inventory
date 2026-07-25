@@ -21,7 +21,8 @@ export async function GET(request: Request) {
   const db = dbBinding();
   if (!db) return Response.json({ inventory: sampleAdminInventory, demo: true });
   const rows = await db.prepare(`
-    SELECT v.id, b.name AS brand, m.model_name AS model, v.slug, v.sku,
+    SELECT v.id, b.name AS brand, m.model_name AS model, m.model_number AS manufacturerCode,
+      v.slug, v.sku, v.barcode AS gtin,
       v.ram_gb AS ramGb, v.storage_gb AS storageGb, v.colour_name AS colour,
       v.colour_hex AS colourHex, v.condition, m.network_type AS networkType,
       v.mrp, v.selling_price AS sellingPrice, v.available_stock AS availableStock,
@@ -109,6 +110,19 @@ export async function POST(request: Request) {
         db.prepare("UPDATE phone_variants SET selling_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(sellingPrice, id),
         db.prepare("INSERT INTO price_history (phone_variant_id, old_selling_price, new_selling_price, reason) VALUES (?, ?, ?, ?)").bind(id, current.sellingPrice, sellingPrice, cleanText(body.reason, 180) || "Admin price update"),
         db.prepare("INSERT INTO audit_logs (action, table_name, record_id, after_data) VALUES ('PRICE_UPDATE', 'phone_variants', ?, ?)").bind(id, JSON.stringify({ sellingPrice })),
+      ]);
+      return Response.json({ ok: true });
+    }
+
+    if (action === "updateImage") {
+      const gtin = cleanText(body.gtin, 18).replace(/[^0-9]/g, "");
+      const imageUrl = cleanText(body.imageUrl, 500);
+      if (gtin.length < 8 || !isTrustedPhoneImageUrl(imageUrl)) {
+        return Response.json({ error: "A verified GTIN and trusted Icecat image are required." }, { status: 400 });
+      }
+      await db.batch([
+        db.prepare("UPDATE phone_variants SET barcode = ?, image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND active = 1").bind(gtin, imageUrl, id),
+        db.prepare("INSERT INTO audit_logs (action, table_name, record_id, after_data) VALUES ('IMAGE_UPDATE', 'phone_variants', ?, ?)").bind(id, JSON.stringify({ gtin, source: "icecat" })),
       ]);
       return Response.json({ ok: true });
     }
