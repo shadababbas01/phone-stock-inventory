@@ -11,6 +11,15 @@ function fallback(body: Record<string, unknown>) {
   return phoneArtUrl({ brand: clean(body.brand), model: clean(body.model), colour: clean(body.colour) });
 }
 
+function canonicalGtin(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits && digits.length <= 14 ? digits.padStart(14, "0") : digits;
+}
+
+function identifier(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 export async function POST(request: Request) {
   if (!(await isAdminRequest(request))) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
@@ -47,7 +56,20 @@ export async function POST(request: Request) {
     }
     const product = parseIcecatProduct(await response.json());
     if (!product) return Response.json({ matched: false, reason: "No exact Icecat image was found; generated artwork will be used.", fallbackUrl });
-    return Response.json({ matched: true, matchType, ...product, fallbackUrl });
+
+    if (gtin && !product.gtins.some(value => canonicalGtin(value) === canonicalGtin(gtin))) {
+      return Response.json({ matched: false, verified: false, reason: "Icecat returned a different barcode, so the image was rejected.", fallbackUrl });
+    }
+    if (!gtin) {
+      if (identifier(product.productCode) !== identifier(manufacturerCode)) {
+        return Response.json({ matched: false, verified: false, reason: "Icecat returned a different manufacturer code, so the image was rejected.", fallbackUrl });
+      }
+      if (brand && identifier(product.brand) !== identifier(brand)) {
+        return Response.json({ matched: false, verified: false, reason: "Icecat returned a different brand, so the image was rejected.", fallbackUrl });
+      }
+    }
+
+    return Response.json({ matched: true, verified: true, matchType, ...product, fallbackUrl });
   } catch {
     return Response.json({ matched: false, reason: "Icecat could not be reached; generated artwork will be used.", fallbackUrl });
   }

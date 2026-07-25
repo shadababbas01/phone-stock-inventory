@@ -1,7 +1,8 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- generated SVG previews and the supplied logo are served locally. */
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { IScannerControls } from "@zxing/browser";
 import { money, type PhoneVariant } from "@/lib/catalog";
 import { sampleAdminInventory } from "@/lib/admin-sample";
 import { phoneArtUrl } from "@/lib/phone-art";
@@ -19,6 +20,122 @@ type DeviceOptions = {
 
 const emptyOptions: DeviceOptions = { brands: [], models: [], colours: [], ramGb: [], storageGb: [], exactMatch: false, source: "catalog" };
 const emptyForm = { brand: "", model: "", gtin: "", manufacturerCode: "", imageUrl: "", ramGb: "8", storageGb: "128", colour: "", networkType: "5G", mrp: "", sellingPrice: "", purchasePrice: "", availableStock: "0", reorderLevel: "2" };
+type InventoryForm = typeof emptyForm;
+
+function scannedGtin(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 8 && digits.length <= 18 ? digits : "";
+}
+
+function cameraErrorMessage(error: unknown) {
+  const name = error instanceof DOMException ? error.name : "";
+  if (name === "NotAllowedError" || name === "SecurityError") return "Camera permission was denied. Allow camera access in your phone settings, then try again.";
+  if (name === "NotFoundError" || name === "OverconstrainedError") return "No usable rear camera was found. You can still type the barcode manually.";
+  if (name === "NotReadableError") return "The camera is busy in another app. Close that app and try again.";
+  return "The camera could not start. You can still type the barcode manually.";
+}
+
+function BarcodeScanner({ title, onDetected, onClose }: { title: string; onDetected: (gtin: string) => void; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
+  const detectedRef = useRef(false);
+  const detectedHandlerRef = useRef(onDetected);
+  const [status, setStatus] = useState("Starting rear camera…");
+  const [torchAvailable, setTorchAvailable] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+
+  useEffect(() => {
+    detectedHandlerRef.current = onDetected;
+  }, [onDetected]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const videoElement = videoRef.current;
+
+    async function start() {
+      if (!navigator.mediaDevices?.getUserMedia || !videoElement) {
+        setStatus("Camera scanning is not supported here. Open the site in Chrome or Safari, or enter the barcode manually.");
+        return;
+      }
+
+      try {
+        const { BrowserMultiFormatOneDReader } = await import("@zxing/browser");
+        const reader = new BrowserMultiFormatOneDReader();
+        const controls = await reader.decodeFromConstraints({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        }, videoElement, (result) => {
+          if (!result || detectedRef.current) return;
+          const gtin = scannedGtin(result.getText());
+          if (!gtin) {
+            setStatus("A barcode was seen, but it was not a valid product GTIN. Point at the EAN/UPC barcode on the box.");
+            return;
+          }
+          detectedRef.current = true;
+          setStatus(`Barcode ${gtin} detected. Checking the exact product…`);
+          controlsRef.current?.stop();
+          detectedHandlerRef.current(gtin);
+        });
+
+        if (cancelled) {
+          controls.stop();
+          return;
+        }
+        controlsRef.current = controls;
+        setTorchAvailable(Boolean(controls.switchTorch));
+        setStatus("Place the barcode inside the frame. The scan happens automatically.");
+      } catch (error) {
+        if (!cancelled) setStatus(cameraErrorMessage(error));
+      }
+    }
+
+    void start();
+    return () => {
+      cancelled = true;
+      controlsRef.current?.stop();
+      controlsRef.current = null;
+      const stream = videoElement?.srcObject;
+      if (stream instanceof MediaStream) stream.getTracks().forEach(track => track.stop());
+    };
+  }, []);
+
+  async function toggleTorch() {
+    if (!controlsRef.current?.switchTorch) return;
+    const next = !torchOn;
+    try {
+      await controlsRef.current.switchTorch(next);
+      setTorchOn(next);
+    } catch {
+      setTorchAvailable(false);
+      setStatus("Torch control is unavailable on this phone. Keep the barcode well lit.");
+    }
+  }
+
+  return (
+    <div className="scanner-backdrop" role="presentation">
+      <section className="barcode-scanner" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
+        <div className="scanner-header">
+          <div><span>Exact product image</span><h2 id="scanner-title">{title}</h2></div>
+          <button type="button" onClick={onClose} aria-label="Close barcode scanner">×</button>
+        </div>
+        <div className="scanner-camera">
+          <video ref={videoRef} muted playsInline aria-label="Live rear-camera barcode preview" />
+          <div className="scanner-guide" aria-hidden="true"><i /><i /><i /><i /><span /></div>
+        </div>
+        <p className="scanner-status" role="status">{status}</p>
+        <div className="scanner-actions">
+          {torchAvailable && <button type="button" className="secondary-btn" onClick={() => void toggleTorch()}>{torchOn ? "Turn torch off" : "Turn torch on"}</button>}
+          <button type="button" className="primary-btn" onClick={onClose}>Enter barcode manually</button>
+        </div>
+        <small>Camera images stay on this phone. Only the detected barcode number is sent for the Icecat lookup.</small>
+      </section>
+    </div>
+  );
+}
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return <span className={`brand-lockup ${compact ? "compact" : ""}`}><img src="/mangla-logo.svg" alt="Mangla Communication" className="brand-logo" /></span>;
@@ -42,6 +159,8 @@ export default function AdminApp() {
   const [suggestionsBusy, setSuggestionsBusy] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
   const [imageStatus, setImageStatus] = useState("Generated fallback will be used unless an exact identifier matches Icecat.");
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerPhone, setScannerPhone] = useState<PhoneVariant | null>(null);
 
   const loadInventory = async () => {
     const response = await fetch("/api/admin/inventory", { cache: "no-store" });
@@ -135,28 +254,80 @@ export default function AdminApp() {
     if (ok) { setModalOpen(false); setForm(emptyForm); setImageStatus("Generated fallback will be used unless an exact identifier matches Icecat."); }
   }
 
-  async function findExactImage() {
-    if (!form.gtin && !(form.brand && form.manufacturerCode)) {
+  async function findExactImage(overrides: Partial<InventoryForm> = {}) {
+    const requestForm = { ...form, ...overrides };
+    if (!requestForm.gtin && !(requestForm.brand && requestForm.manufacturerCode)) {
       setImageStatus("Enter a GTIN/barcode or the brand and manufacturer code first.");
       return;
     }
     setImageBusy(true);
     try {
-      const response = await fetch("/api/admin/product-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      const data = await response.json() as { matched?: boolean; imageUrl?: string; fallbackUrl?: string; matchType?: string; reason?: string; title?: string };
+      const response = await fetch("/api/admin/product-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestForm) });
+      const data = await response.json() as { matched?: boolean; verified?: boolean; imageUrl?: string; fallbackUrl?: string; matchType?: string; reason?: string; title?: string; brand?: string; productCode?: string };
       if (response.status === 401) { setAuthenticated(false); return; }
-      if (data.matched && data.imageUrl) {
-        setForm(current => ({ ...current, imageUrl: data.imageUrl ?? "" }));
-        setImageStatus(`Exact ${data.matchType === "gtin" ? "GTIN" : "manufacturer-code"} image found${data.title ? ` · ${data.title}` : ""}.`);
+      if (data.matched && data.verified && data.imageUrl) {
+        setForm(current => ({
+          ...current,
+          gtin: requestForm.gtin || current.gtin,
+          brand: current.brand || data.brand || "",
+          manufacturerCode: current.manufacturerCode || data.productCode || "",
+          imageUrl: data.imageUrl ?? "",
+        }));
+        setImageStatus(`Verified ${data.matchType === "gtin" ? "barcode" : "manufacturer-code"} image found${data.title ? ` · ${data.title}` : ""}.`);
       } else {
         setForm(current => ({ ...current, imageUrl: "" }));
-        setImageStatus(data.reason ?? "No exact image found; generated artwork will be used.");
+        setImageStatus(data.reason ?? "No verified exact image was found; generated artwork will be used.");
       }
     } catch {
       setForm(current => ({ ...current, imageUrl: "" }));
       setImageStatus("Image lookup is unavailable; generated artwork will be used.");
     } finally {
       setImageBusy(false);
+    }
+  }
+
+  async function handleScannedBarcode(gtin: string) {
+    const target = scannerPhone;
+    setScannerOpen(false);
+    setScannerPhone(null);
+
+    if (!target) {
+      setForm(current => ({ ...current, gtin, imageUrl: "" }));
+      setImageStatus(`Barcode ${gtin} scanned. Checking Icecat for an exact match…`);
+      await findExactImage({ gtin });
+      return;
+    }
+
+    setBusy(true);
+    setNotice(`Checking ${target.brand} ${target.model}…`);
+    try {
+      const response = await fetch("/api/admin/product-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...target, gtin }),
+      });
+      const data = await response.json() as { matched?: boolean; verified?: boolean; imageUrl?: string; reason?: string };
+      if (response.status === 401) { setAuthenticated(false); return; }
+      if (!data.matched || !data.verified || !data.imageUrl) {
+        setNotice(data.reason ?? "No verified exact image was found for that barcode.");
+        return;
+      }
+      const saved = await fetch("/api/admin/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "updateImage", id: target.id, gtin, imageUrl: data.imageUrl }),
+      });
+      const savedData = await saved.json().catch(() => ({})) as { error?: string };
+      if (!saved.ok) {
+        setNotice(savedData.error ?? "The exact image could not be saved.");
+        return;
+      }
+      await loadInventory();
+      setNotice(`Exact image saved for ${target.brand} ${target.model}`);
+    } catch {
+      setNotice("Image lookup is unavailable. Check the connection and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -252,7 +423,7 @@ export default function AdminApp() {
           <div className="admin-heading"><div><h1>{tabTitle}</h1><p>{tab === "inventory" ? "Manage every exact RAM, storage and colour variant." : tab === "stock" ? "Adjust stock with a permanent reason and audit trail." : tab === "reports" ? "Understand stock value, margin and attention items." : tab === "suppliers" ? "Private supplier records stay hidden from customers." : "Configure how your public shop catalogue behaves."}</p></div>{tab === "inventory" && <button className="primary-btn" onClick={() => setModalOpen(true)}>+ Add phone variant</button>}</div>
           <div className="admin-stats"><div className="admin-stat-card"><span>Total variants</span><strong>{inventory.length}</strong></div><div className="admin-stat-card"><span>Physical stock</span><strong>{totalStock}</strong></div><div className="admin-stat-card"><span>Available to sell</span><strong>{available}</strong></div><div className="admin-stat-card"><span>Low / out of stock</span><strong>{lowStock}</strong></div></div>
 
-          {(tab === "inventory" || tab === "stock") && <div className="admin-panel"><div className="panel-tools"><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search model, SKU or colour" />{tab === "inventory" && <label className="secondary-btn import-btn">Import CSV<input type="file" accept=".csv,text/csv" onChange={importCsv} hidden /></label>}<button className="secondary-btn" onClick={exportCsv}>Export CSV</button></div><table className="admin-table"><thead><tr><th>Phone</th><th>Variant</th><th>Price</th><th>Stock</th><th>Private cost</th><th>Actions</th></tr></thead><tbody>{visible.map(phone => { const availableNow = phone.availableStock - phone.reservedStock; return <tr key={phone.id}><td><strong>{phone.brand} {phone.model}</strong><small>{phone.sku}</small></td><td>{phone.ramGb}/{phone.storageGb} GB<br/><small>{phone.colour} · {phone.condition}</small></td><td><strong>{money(phone.sellingPrice)}</strong><small>MRP {money(phone.mrp)}</small></td><td><span className={`status-dot ${availableNow === 0 ? "out" : availableNow <= phone.reorderLevel ? "low" : ""}`} />{availableNow} available<br/><small>{phone.reservedStock} reserved</small></td><td>{money(phone.purchasePrice ?? 0)}<br/><small>Margin {money(phone.sellingPrice - (phone.purchasePrice ?? 0))}</small></td><td><div className="table-actions"><button onClick={() => adjustStock(phone, 1)}>± Stock</button><button onClick={() => updatePrice(phone)}>₹ Price</button><button onClick={() => archive(phone)}>Archive</button></div></td></tr>; })}</tbody></table></div>}
+          {(tab === "inventory" || tab === "stock") && <div className="admin-panel"><div className="panel-tools"><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search model, SKU or colour" />{tab === "inventory" && <label className="secondary-btn import-btn">Import CSV<input type="file" accept=".csv,text/csv" onChange={importCsv} hidden /></label>}<button className="secondary-btn" onClick={exportCsv}>Export CSV</button></div><table className="admin-table"><thead><tr><th>Phone</th><th>Variant</th><th>Price</th><th>Stock</th><th>Private cost</th><th>Actions</th></tr></thead><tbody>{visible.map(phone => { const availableNow = phone.availableStock - phone.reservedStock; return <tr key={phone.id}><td><strong>{phone.brand} {phone.model}</strong><small>{phone.sku}</small></td><td>{phone.ramGb}/{phone.storageGb} GB<br/><small>{phone.colour} · {phone.condition}</small></td><td><strong>{money(phone.sellingPrice)}</strong><small>MRP {money(phone.mrp)}</small></td><td><span className={`status-dot ${availableNow === 0 ? "out" : availableNow <= phone.reorderLevel ? "low" : ""}`} />{availableNow} available<br/><small>{phone.reservedStock} reserved</small></td><td>{money(phone.purchasePrice ?? 0)}<br/><small>Margin {money(phone.sellingPrice - (phone.purchasePrice ?? 0))}</small></td><td><div className="table-actions"><button onClick={() => adjustStock(phone, 1)}>± Stock</button><button onClick={() => updatePrice(phone)}>₹ Price</button><button onClick={() => { setScannerPhone(phone); setScannerOpen(true); }}>▣ Image</button><button onClick={() => archive(phone)}>Archive</button></div></td></tr>; })}</tbody></table></div>}
 
           {tab === "reports" && <div className="report-grid"><div className="report-card"><h3>Inventory cost</h3><p>Approximate purchase value of current physical stock.</p><strong>{money(costValue)}</strong></div><div className="report-card"><h3>Retail value</h3><p>Potential revenue at current selling prices.</p><strong>{money(retailValue)}</strong></div><div className="report-card"><h3>Potential gross margin</h3><p>Retail value minus recorded purchase cost.</p><strong>{money(retailValue - costValue)}</strong></div><div className="report-card"><h3>Attention needed</h3><p>Variants at or below their reorder level.</p><strong>{lowStock} variants</strong></div></div>}
           {tab === "suppliers" && <div className="admin-panel"><div className="admin-empty"><h3>Supplier register is private</h3><p>Add supplier records after connecting the production database. Supplier details are never included in public inventory responses.</p><button className="primary-btn" onClick={() => setNotice("Supplier workflow is ready for database setup")}>+ Add supplier</button></div></div>}
@@ -263,7 +434,7 @@ export default function AdminApp() {
       {modalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setModalOpen(false); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="add-phone-title"><div className="modal-header"><h2 id="add-phone-title">Add exact phone variant</h2><button onClick={() => setModalOpen(false)} aria-label="Close">×</button></div><form className="inventory-form" onSubmit={createItem}><div className="form-grid">
         <label>Brand *<input list="phone-brand-options" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value, model: "", colour: "", imageUrl: "" })} placeholder="Start typing, e.g. Sam" autoComplete="off" required /><datalist id="phone-brand-options">{deviceOptions.brands.map(brand => <option key={brand} value={brand} />)}</datalist></label>
         <label>Model *<input list="phone-model-options" value={form.model} onChange={e => setForm({ ...form, model: e.target.value, colour: "", imageUrl: "" })} placeholder={form.brand ? "Type S, A, iPhone…" : "Choose brand first"} autoComplete="off" disabled={!form.brand} required /><datalist id="phone-model-options">{deviceOptions.models.map(model => <option key={model} value={model} />)}</datalist></label>
-        <label>Barcode / GTIN<input value={form.gtin} onChange={e => setForm({ ...form, gtin: e.target.value.replace(/[^0-9]/g, ""), imageUrl: "" })} onBlur={() => { if (form.gtin.length >= 8) void findExactImage(); }} placeholder="Scan or enter barcode" inputMode="numeric" autoComplete="off" /></label>
+        <label>Barcode / GTIN<div className="barcode-input-row"><input value={form.gtin} onChange={e => setForm({ ...form, gtin: e.target.value.replace(/[^0-9]/g, ""), imageUrl: "" })} onBlur={() => { if (form.gtin.length >= 8) void findExactImage(); }} placeholder="Scan or enter barcode" inputMode="numeric" autoComplete="off" /><button type="button" onClick={() => { setScannerPhone(null); setScannerOpen(true); }} aria-label="Scan phone barcode with camera">Scan</button></div><small className="field-help">Use the barcode on the sealed phone box for the most accurate image.</small></label>
         <label>Manufacturer code<input value={form.manufacturerCode} onChange={e => setForm({ ...form, manufacturerCode: e.target.value, imageUrl: "" })} onBlur={() => { if (!form.gtin && form.brand && form.manufacturerCode) void findExactImage(); }} placeholder="e.g. SM-S931BZKDEUB" autoComplete="off" /></label>
         <label>RAM (GB) *<input list="phone-ram-options" type="number" min="1" value={form.ramGb} onChange={e => setForm({ ...form, ramGb: e.target.value })} inputMode="numeric" required /><datalist id="phone-ram-options">{deviceOptions.ramGb.map(value => <option key={value} value={value} />)}</datalist></label>
         <label>Storage (GB) *<input list="phone-storage-options" type="number" min="1" value={form.storageGb} onChange={e => setForm({ ...form, storageGb: e.target.value })} inputMode="numeric" required /><datalist id="phone-storage-options">{deviceOptions.storageGb.map(value => <option key={value} value={value} />)}</datalist></label>
@@ -277,6 +448,7 @@ export default function AdminApp() {
         <label>Opening stock<input type="number" min="0" value={form.availableStock} onChange={e => setForm({ ...form, availableStock: e.target.value })} inputMode="numeric" /></label>
         <label>Low-stock level<input type="number" min="0" value={form.reorderLevel} onChange={e => setForm({ ...form, reorderLevel: e.target.value })} inputMode="numeric" /></label>
       </div><div className="form-actions"><button type="button" className="secondary-btn" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary-btn" disabled={busy}>{busy ? "Saving…" : "Save phone variant"}</button></div></form></div></div>}
+      {scannerOpen && <BarcodeScanner title={scannerPhone ? `Scan ${scannerPhone.brand} ${scannerPhone.model}` : "Scan phone-box barcode"} onDetected={gtin => void handleScannedBarcode(gtin)} onClose={() => { setScannerOpen(false); setScannerPhone(null); }} />}
       {notice && <div className="toast" role="status">{notice}</div>}
     </main>
   );

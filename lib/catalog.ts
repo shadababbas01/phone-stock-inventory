@@ -17,6 +17,8 @@ export type PhoneVariant = {
   imageUrl: string;
   updatedAt: string;
   sku?: string;
+  gtin?: string;
+  manufacturerCode?: string;
   purchasePrice?: number;
   minimumSellingPrice?: number;
 };
