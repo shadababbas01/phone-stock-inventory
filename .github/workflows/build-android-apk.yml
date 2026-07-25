@@ -11,6 +11,7 @@ on:
       - "capacitor.config.ts"
       - "package.json"
       - "package-lock.json"
+      - "scripts/configure-android-camera.mjs"
       - ".github/workflows/build-android-apk.yml"
 
 permissions:
@@ -43,6 +44,7 @@ jobs:
       - name: Generate Android project
         run: |
           npx cap add android
+          node scripts/configure-android-camera.mjs
           npx capacitor-assets generate --android --iconBackgroundColor '#E99524' --iconBackgroundColorDark '#0B0D0F' --splashBackgroundColor '#0B0D0F' --splashBackgroundColorDark '#0B0D0F'
           chmod +x android/gradlew
 
