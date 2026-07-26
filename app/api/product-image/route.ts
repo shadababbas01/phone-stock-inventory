@@ -8,8 +8,14 @@ async function proxyImage(remoteImageUrl: string) {
     redirect: "follow",
     signal: AbortSignal.timeout(10_000),
   });
-  const contentType = image.headers.get("content-type") ?? "";
-  if (!image.ok || !contentType.startsWith("image/")) return new Response("Invalid image source", { status: 502 });
+  const suppliedType = image.headers.get("content-type") ?? "";
+  const extensionType = /\.avif(?:\?|$)/i.test(remoteImageUrl) ? "image/avif"
+    : /\.webp(?:\?|$)/i.test(remoteImageUrl) ? "image/webp"
+      : /\.png(?:\?|$)/i.test(remoteImageUrl) ? "image/png"
+        : /\.jpe?g(?:\?|$)/i.test(remoteImageUrl) ? "image/jpeg"
+          : "";
+  const contentType = suppliedType.startsWith("image/") ? suppliedType : extensionType;
+  if (!image.ok || !contentType) return new Response("Invalid image source", { status: 502 });
   const size = Number(image.headers.get("content-length") ?? 0);
   if (size > 8_000_000) return new Response("Image too large", { status: 413 });
   return new Response(image.body, {
