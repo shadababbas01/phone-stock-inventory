@@ -22,6 +22,7 @@ jobs:
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       MOBILE_API_KEY: ${{ secrets.MOBILE_API_KEY }}
       ICECAT_SHOPNAME: ${{ secrets.ICECAT_SHOPNAME }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
     steps:
       - name: Check out source
@@ -45,6 +46,7 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -n "$ADMIN_PASSWORD"
           test -n "$ICECAT_SHOPNAME"
+          test -n "$TAVILY_API_KEY"
 
       - name: Lint and test
         run: npm run lint && npm test
