@@ -2896,3 +2896,174 @@ html[data-theme="dark"] .storefront-shell .header-tagline {
 @media (prefers-reduced-motion: reduce) {
   .scanner-guide span { animation: none; }
 }
+
+/* Final mobile readability pass: larger cards, text, specs and touch targets. */
+.image-lightbox img.exact-product-image {
+  object-position: 18% center;
+}
+
+@media (max-width: 760px) {
+  .storefront-shell .site-header {
+    height: 66px;
+    min-height: 66px;
+    padding: 0 10px 14px;
+  }
+  .storefront-shell .site-header .brand-logo {
+    width: min(44vw, 172px);
+    height: 48px;
+  }
+  .storefront-shell .header-download,
+  .storefront-shell .header-whatsapp,
+  .storefront-shell .theme-toggle,
+  .storefront-shell .admin-link {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    border-radius: 10px;
+  }
+  .storefront-shell .header-whatsapp svg { width: 22px; height: 22px; }
+  .storefront-shell .theme-toggle b,
+  .storefront-shell .admin-link > span { font-size: 20px; }
+  .storefront-shell .hero { padding: 10px 0 8px; }
+  .storefront-shell .hero .container,
+  .storefront-shell .catalog.container { width: calc(100% - 20px); }
+  .storefront-shell .search-box,
+  .storefront-shell .filter-trigger {
+    height: 46px;
+    border-radius: 11px;
+  }
+  .storefront-shell .search-box input { font-size: 14px; }
+  .storefront-shell .filter-trigger {
+    min-width: 82px;
+    padding-inline: 10px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .storefront-shell .catalog { padding-bottom: 72px; }
+  .storefront-shell .catalog-toolbar {
+    min-height: 44px;
+    margin-bottom: 8px;
+  }
+  .storefront-shell .catalog-title h1 { font-size: 21px; }
+  .storefront-shell .catalog-title > span {
+    min-width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+  .storefront-shell .catalog-toolbar label {
+    min-width: 120px;
+    height: 38px;
+    padding-inline: 9px;
+  }
+  .storefront-shell .catalog-toolbar select { font-size: 11px; }
+  .storefront-shell .product-grid { gap: 10px; }
+  .storefront-shell .product-card {
+    height: 220px;
+    min-height: 220px;
+    grid-template-columns: 38% 62%;
+    border-radius: 14px;
+  }
+  .storefront-shell .product-image-wrap {
+    height: 208px;
+    margin: 6px;
+    border-radius: 10px;
+  }
+  .storefront-shell .product-image-button { padding: 4px; }
+  .storefront-shell .network-badge {
+    top: 7px;
+    left: 7px;
+    padding: 4px 7px;
+    border-radius: 6px;
+    font-size: 9px;
+  }
+  .storefront-shell .product-content {
+    padding: 12px 58px 10px 8px;
+  }
+  .storefront-shell .product-content .eyebrow {
+    font-size: 12px;
+    line-height: 1.2;
+    letter-spacing: .08em;
+  }
+  .storefront-shell .product-content h2 {
+    margin: 3px 0 4px;
+    font-size: clamp(21px, 6vw, 25px);
+    line-height: 1.05;
+  }
+  .storefront-shell .selling-price {
+    font-size: clamp(23px, 6.5vw, 28px);
+    line-height: 1.1;
+  }
+  .storefront-shell .mrp {
+    margin-top: 2px;
+    font-size: 10px;
+  }
+  .storefront-shell .product-card .stock-pill {
+    margin-top: 6px;
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+  .storefront-shell .spec-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    margin-top: 7px;
+  }
+  .storefront-shell .spec-grid > div {
+    min-width: 0;
+    padding: 7px 8px;
+    border-radius: 7px;
+  }
+  .storefront-shell .spec-grid > div:nth-child(3) { grid-column: 1 / -1; }
+  .storefront-shell .product-card .spec-grid strong {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow: visible;
+    font-size: 11px;
+    line-height: 1.15;
+    white-space: normal;
+  }
+  .storefront-shell .spec-grid i {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    margin-right: 5px;
+  }
+  .storefront-shell .card-actions {
+    right: 7px;
+    bottom: 10px;
+    gap: 8px;
+  }
+  .storefront-shell .product-card .whatsapp-btn {
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    flex-basis: 48px;
+    border-radius: 12px;
+  }
+  .storefront-shell .product-card .whatsapp-btn svg {
+    width: 27px;
+    height: 27px;
+  }
+  .storefront-shell .share-btn {
+    width: 42px;
+    height: 42px;
+    font-size: 26px;
+  }
+  .storefront-shell .mobile-tabbar { height: 56px; }
+  .storefront-shell .mobile-tabbar a,
+  .storefront-shell .mobile-tabbar button { font-size: 22px; }
+  .image-lightbox { padding: 8px; }
+  .image-lightbox section {
+    width: 100%;
+    max-height: 94dvh;
+  }
+  .image-lightbox img.exact-product-image {
+    min-height: min(76dvh, 680px);
+    object-position: 31% center;
+  }
+  .lightbox-close {
+    width: 46px;
+    height: 46px;
+    font-size: 31px;
+  }
+}
