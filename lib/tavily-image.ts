@@ -95,28 +95,30 @@ function colourImageFromHtml(html: string, colour: string) {
   return scored.sort((left, right) => right.score - left.score)[0]?.url ?? "";
 }
 
-async function imageFromOfficialPage(pageUrl: string, model: string, colour: string) {
+async function imageFromOfficialPage(pageUrl: string, model: string, colour: string, manufacturerCode = "") {
   try {
     const response = await fetch(pageUrl, {
       headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "ManglaCommunicationInventory/1.0" },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!response.ok) return { url: "", colourVerified: false };
+    if (!response.ok) return { url: "", colourVerified: false, identifierVerified: false };
     const html = (await response.text()).slice(0, 5_000_000);
     const colourImage = colourImageFromHtml(html, colour);
-    if (colourImage) return { url: colourImage, colourVerified: true };
+    const identifierVerified = Boolean(manufacturerCode && normalized(html).includes(normalized(manufacturerCode)));
+    if (colourImage) return { url: colourImage, colourVerified: true, identifierVerified };
     const meta = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i)
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
     const metaUrl = safeImageUrl(decodedUrl(meta?.[1] ?? ""));
-    if (metaUrl) return { url: metaUrl, colourVerified: false };
+    if (metaUrl) return { url: metaUrl, colourVerified: false, identifierVerified };
     const modelPath = normalized(model).replaceAll(" ", "-");
     const candidates = imageUrlsFrom(html);
     return {
       url: candidates.find(url => normalized(url).includes(modelPath)) ?? candidates[0] ?? "",
       colourVerified: false,
+      identifierVerified,
     };
   } catch {
-    return { url: "", colourVerified: false };
+    return { url: "", colourVerified: false, identifierVerified: false };
   }
 }
 
@@ -140,8 +142,17 @@ function productSlug(model: string) {
   return normalized(model).replaceAll(" ", "-");
 }
 
-function predictableOfficialPages(brandKey: string, model: string) {
+const officialProductCodePages: Record<string, string[]> = {
+  "oppo:cph2729": [
+    "https://www.oppo.com/in/smartphones/series-k/k13-5g/specs/",
+    "https://www.oppo.com/in/smartphones/series-k/k13-5g/",
+  ],
+};
+
+function predictableOfficialPages(brandKey: string, model: string, manufacturerCode: string) {
+  const exactCodePages = officialProductCodePages[`${brandKey}:${normalized(manufacturerCode).replaceAll(" ", "")}`];
   const slug = productSlug(model);
+  if (exactCodePages?.length) return exactCodePages;
   if (!slug) return [];
   if (brandKey === "realme") return [`https://www.realme.com/in/realme-${slug}`, `https://www.realme.com/in/realme-${slug}/specs`];
   if (brandKey === "apple") return [`https://www.apple.com/in/${slug}/`];
@@ -161,9 +172,9 @@ export async function findOfficialPhoneImage(input: {
   const brandKey = normalized(input.brand).replaceAll(" ", "");
   const domains = officialDomains[brandKey];
   if (!domains?.length || (!input.model && !input.manufacturerCode)) return null;
-  for (const pageUrl of predictableOfficialPages(brandKey, input.model)) {
-    const pageImage = await imageFromOfficialPage(pageUrl, input.model, input.colour);
-    if (pageImage.url) {
+  for (const pageUrl of predictableOfficialPages(brandKey, input.model, input.manufacturerCode)) {
+    const pageImage = await imageFromOfficialPage(pageUrl, input.model, input.colour, input.manufacturerCode);
+    if (pageImage.url && (!input.manufacturerCode || pageImage.identifierVerified)) {
       return {
         remoteImageUrl: pageImage.url,
         officialPageUrl: pageUrl,
@@ -209,11 +220,11 @@ export async function findOfficialPhoneImage(input: {
     }
     if (!domains.some(domain => page.hostname === domain || page.hostname.endsWith(`.${domain}`))) continue;
     const evidence = `${clean(result.title)} ${clean(result.content)} ${page.pathname}`;
-    if (!matchesModel(evidence, input.model, input.manufacturerCode)) continue;
+    const pageImage = await imageFromOfficialPage(page.toString(), input.model, input.colour, input.manufacturerCode);
+    if (!matchesModel(evidence, input.model, input.manufacturerCode) && !pageImage.identifierVerified) continue;
     const images = (Array.isArray(result.images) ? result.images : []).map(imageDetails)
       .map(image => ({ ...image, url: safeImageUrl(image.url) }))
       .filter(image => image.url);
-    const pageImage = await imageFromOfficialPage(page.toString(), input.model, input.colour);
     const colourImage = colour
       ? images.find(image => normalized(image.description).includes(colour))
       : undefined;
