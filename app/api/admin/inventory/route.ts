@@ -90,6 +90,21 @@ export async function POST(request: Request) {
       if (manufacturerCode) await db.prepare("UPDATE phone_models SET model_number = COALESCE(NULLIF(model_number, ''), ?) WHERE id = ?").bind(manufacturerCode, modelRow.id).run();
       const slug = `${brand}-${model}-${ram}-${storage}-${colour}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       const sku = cleanText(body.sku, 60) || `${brand.slice(0,3)}-${model.slice(0,4)}-${ram}-${storage}-${colour.slice(0,2)}`.toUpperCase().replace(/\s/g, "");
+      const duplicate = await db.prepare(`
+        SELECT v.id, v.sku, b.name AS brand, m.model_name AS model
+        FROM phone_variants v
+        JOIN phone_models m ON m.id = v.phone_model_id
+        JOIN brands b ON b.id = m.brand_id
+        WHERE upper(v.sku) = upper(?)
+        LIMIT 1
+      `).bind(sku).first<{ id: number; sku: string; brand: string; model: string }>();
+      if (duplicate) {
+        return Response.json({
+          code: "DUPLICATE_SKU",
+          existingId: duplicate.id,
+          error: `${duplicate.brand} ${duplicate.model} with SKU ${duplicate.sku} already exists. Delete the existing item first, then add this phone as a new item.`,
+        }, { status: 409 });
+      }
       const colourHex = colourToHex(colour);
       const requestedImageUrl = cleanText(body.imageUrl, 500);
       const imageUrl = isTrustedPhoneImageUrl(requestedImageUrl) ? requestedImageUrl : phoneArtUrl({ brand, model, colour, colourHex });
@@ -150,10 +165,22 @@ export async function POST(request: Request) {
       return Response.json({ ok: true });
     }
 
-    if (action === "archive") {
+    if (action === "delete") {
+      const existing = await db.prepare(`
+        SELECT b.name AS brand, m.model_name AS model, v.sku
+        FROM phone_variants v
+        JOIN phone_models m ON m.id = v.phone_model_id
+        JOIN brands b ON b.id = m.brand_id
+        WHERE v.id = ?
+      `).bind(id).first<{ brand: string; model: string; sku: string }>();
+      if (!existing) return Response.json({ error: "Inventory item was not found." }, { status: 404 });
       await db.batch([
-        db.prepare("UPDATE phone_variants SET active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(id),
-        db.prepare("INSERT INTO audit_logs (action, table_name, record_id) VALUES ('ARCHIVE', 'phone_variants', ?)").bind(id),
+        db.prepare("DELETE FROM phone_units WHERE phone_variant_id = ?").bind(id),
+        db.prepare("DELETE FROM inventory_private WHERE phone_variant_id = ?").bind(id),
+        db.prepare("DELETE FROM stock_movements WHERE phone_variant_id = ?").bind(id),
+        db.prepare("DELETE FROM price_history WHERE phone_variant_id = ?").bind(id),
+        db.prepare("DELETE FROM phone_variants WHERE id = ?").bind(id),
+        db.prepare("INSERT INTO audit_logs (action, table_name, record_id, before_data) VALUES ('DELETE', 'phone_variants', ?, ?)").bind(id, JSON.stringify(existing)),
       ]);
       return Response.json({ ok: true });
     }
@@ -161,7 +188,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "Unknown action." }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update inventory.";
-    if (/UNIQUE constraint/i.test(message)) return Response.json({ error: "This exact phone variant or SKU already exists." }, { status: 409 });
+    if (/UNIQUE constraint/i.test(message)) {
+      return Response.json({
+        code: "DUPLICATE_SKU",
+        error: "This phone SKU or exact variant already exists. Delete the existing item first, then add it as a new item.",
+      }, { status: 409 });
+    }
     return Response.json({ error: message }, { status: 500 });
   }
 }
