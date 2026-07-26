@@ -52,6 +52,51 @@ function safeImageUrl(value: string) {
   }
 }
 
+function decodedUrl(value: string) {
+  return value.replaceAll("\\/", "/").replaceAll("\\u002F", "/").replaceAll("&amp;", "&");
+}
+
+function imageUrlsFrom(value: string) {
+  return [...value.matchAll(/https:\\?\/\\?\/[^"'<>\\\s]+\.(?:avif|webp|png|jpe?g)(?:\?[^"'<>\\\s]*)?/gi)]
+    .map(match => safeImageUrl(decodedUrl(match[0])))
+    .filter(url => url && !/logo|icon|favicon|sprite|navigation/i.test(url));
+}
+
+async function imageFromOfficialPage(pageUrl: string, model: string, colour: string) {
+  try {
+    const response = await fetch(pageUrl, {
+      headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "ManglaCommunicationInventory/1.0" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) return { url: "", colourVerified: false };
+    const html = (await response.text()).slice(0, 5_000_000);
+    const colourNeedle = normalized(colour);
+    if (colourNeedle) {
+      const normalizedHtml = normalized(html);
+      const colourIndex = normalizedHtml.indexOf(colourNeedle);
+      if (colourIndex >= 0) {
+        // Normalization changes offsets, so search all occurrences in the original HTML.
+        const originalIndex = html.toLowerCase().indexOf(colour.toLowerCase());
+        const nearby = html.slice(Math.max(0, originalIndex - 1_200), originalIndex + 2_400);
+        const candidates = imageUrlsFrom(nearby);
+        if (candidates[0]) return { url: candidates[0], colourVerified: true };
+      }
+    }
+    const meta = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
+    const metaUrl = safeImageUrl(decodedUrl(meta?.[1] ?? ""));
+    if (metaUrl) return { url: metaUrl, colourVerified: false };
+    const modelPath = normalized(model).replaceAll(" ", "-");
+    const candidates = imageUrlsFrom(html);
+    return {
+      url: candidates.find(url => normalized(url).includes(modelPath)) ?? candidates[0] ?? "",
+      colourVerified: false,
+    };
+  } catch {
+    return { url: "", colourVerified: false };
+  }
+}
+
 function matchesModel(haystack: string, model: string, manufacturerCode: string) {
   const content = normalized(haystack);
   const code = normalized(manufacturerCode);
@@ -78,7 +123,7 @@ export async function findOfficialPhoneImage(input: {
   const brandKey = normalized(input.brand).replaceAll(" ", "");
   const domains = officialDomains[brandKey];
   if (!domains?.length || !input.model) return null;
-  const terms = [input.brand, input.model, input.manufacturerCode, input.colour, "official product image"].filter(Boolean);
+  const terms = [input.brand, input.model, input.colour, "official phone"].filter(Boolean);
   const response = await fetch("https://api.tavily.com/search", {
     method: "POST",
     headers: {
@@ -86,7 +131,7 @@ export async function findOfficialPhoneImage(input: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      query: terms.map(term => `"${term}"`).join(" "),
+      query: terms.join(" "),
       topic: "general",
       search_depth: "basic",
       max_results: 5,
@@ -100,7 +145,7 @@ export async function findOfficialPhoneImage(input: {
     signal: AbortSignal.timeout(12_000),
   });
   if (!response.ok) return null;
-  const payload = await response.json() as { results?: TavilyResult[] };
+  const payload = await response.json() as { results?: TavilyResult[]; images?: TavilyImage[] };
   const colour = normalized(input.colour);
   for (const result of payload.results ?? []) {
     const pageUrl = clean(result.url);
@@ -116,17 +161,27 @@ export async function findOfficialPhoneImage(input: {
     const images = (Array.isArray(result.images) ? result.images : []).map(imageDetails)
       .map(image => ({ ...image, url: safeImageUrl(image.url) }))
       .filter(image => image.url);
-    if (!images.length) continue;
+    const pageImage = await imageFromOfficialPage(page.toString(), input.model, input.colour);
     const colourImage = colour
       ? images.find(image => normalized(image.description).includes(colour))
       : undefined;
-    const selected = colourImage ?? images.find(image => matchesModel(image.description, input.model, input.manufacturerCode)) ?? images[0];
+    const topImages = (Array.isArray(payload.images) ? payload.images : []).map(imageDetails)
+      .map(image => ({ ...image, url: safeImageUrl(image.url) }))
+      .filter(image => image.url);
+    const selected = pageImage.url
+      ? { url: pageImage.url, description: "" }
+      : colourImage
+        ?? images.find(image => matchesModel(image.description, input.model, input.manufacturerCode))
+        ?? topImages.find(image => colour && normalized(image.description).includes(colour))
+        ?? topImages.find(image => matchesModel(image.description, input.model, input.manufacturerCode))
+        ?? images[0];
+    if (!selected?.url) continue;
     return {
       remoteImageUrl: selected.url,
       officialPageUrl: page.toString(),
       title: clean(result.title),
       sourceDomain: page.hostname,
-      colourVerified: Boolean(colourImage),
+      colourVerified: pageImage.colourVerified || Boolean(colourImage),
     };
   }
   return null;
