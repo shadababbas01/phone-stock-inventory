@@ -249,6 +249,11 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
   object-fit: contain !important;
   object-position: center center !important;
 }
+.storefront-shell .product-image-button .exact-product-image {
+  object-fit: cover !important;
+  object-position: 35% center !important;
+  transform: scale(1.04);
+}
 .image-expand-hint {
   position: absolute;
   right: 9px;
@@ -300,6 +305,11 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
   object-fit: contain;
   object-position: center;
   background: #fff;
+}
+.image-lightbox img.exact-product-image {
+  min-height: min(72vh, 680px);
+  object-fit: cover;
+  object-position: 35% center;
 }
 .image-lightbox section > div {
   display: flex;
