@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- generated SVG artwork and the supplied logo are served locally. */
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { money, type PhoneVariant } from "@/lib/catalog";
 import { phoneArtUrl } from "@/lib/phone-art";
 
@@ -17,11 +18,25 @@ function WhatsAppIcon() {
 }
 
 function ProductCard({ phone }: { phone: PhoneVariant }) {
+  const [imageOpen, setImageOpen] = useState(false);
   const available = Math.max(0, phone.availableStock - phone.reservedStock);
   const shareText = `${phone.brand} ${phone.model} · ${phone.ramGb}GB/${phone.storageGb}GB · ${phone.colour} · ${money(phone.sellingPrice)} · ${available > 0 ? `${available} available` : "Out of stock"}`;
   const productUrl = `${publicStoreUrl}/?phone=${phone.slug}`;
   const whatsappText = `Is this device in stock?\n\n${shareText}\n${productUrl}`;
   const artwork = phoneArtUrl(phone);
+  useEffect(() => {
+    if (!imageOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setImageOpen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [imageOpen]);
   const share = async () => {
     const url = `${window.location.origin}/?phone=${phone.slug}`;
     if (navigator.share) await navigator.share({ title: `${phone.brand} ${phone.model}`, text: shareText, url });
@@ -34,7 +49,10 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
   return (
     <article className="product-card" id={phone.slug}>
       <div className="product-image-wrap">
-        <img src={artwork} alt={`${phone.colour} ${phone.brand} ${phone.model}`} className="product-image" />
+        <button type="button" className="product-image-button" onClick={() => setImageOpen(true)} aria-label={`View a larger image of ${phone.colour} ${phone.brand} ${phone.model}`}>
+          <img src={artwork} alt={`${phone.colour} ${phone.brand} ${phone.model}`} className="product-image" />
+          <span className="image-expand-hint" aria-hidden="true">↗</span>
+        </button>
         <span className="network-badge">{phone.networkType}</span>
       </div>
       <div className="product-content">
@@ -57,6 +75,13 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
           <button className="share-btn" onClick={share} aria-label={`Share ${phone.model}`} title="Share product">›</button>
         </div>
       </div>
+      {imageOpen && createPortal(<div className="image-lightbox" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setImageOpen(false); }}>
+        <section role="dialog" aria-modal="true" aria-label={`${phone.brand} ${phone.model} product image`}>
+          <button type="button" className="lightbox-close" onClick={() => setImageOpen(false)} aria-label="Close enlarged image">×</button>
+          <img src={artwork} alt={`${phone.colour} ${phone.brand} ${phone.model}`} />
+          <div><strong>{phone.brand} {phone.model}</strong><span>{phone.ramGb}GB / {phone.storageGb}GB · {phone.colour}</span></div>
+        </section>
+      </div>, document.body)}
     </article>
   );
 }
