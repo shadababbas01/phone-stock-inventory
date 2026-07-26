@@ -24,6 +24,7 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
   const productUrl = `${publicStoreUrl}/?phone=${phone.slug}`;
   const whatsappText = `Is this device in stock?\n\n${shareText}\n${productUrl}`;
   const artwork = phoneArtUrl(phone);
+  const exactImage = phone.imageUrl?.startsWith("/api/product-image");
   useEffect(() => {
     if (!imageOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -50,7 +51,7 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
     <article className="product-card" id={phone.slug}>
       <div className="product-image-wrap">
         <button type="button" className="product-image-button" onClick={() => setImageOpen(true)} aria-label={`View a larger image of ${phone.colour} ${phone.brand} ${phone.model}`}>
-          <img src={artwork} alt={`${phone.colour} ${phone.brand} ${phone.model}`} className="product-image" />
+          <img src={artwork} alt={`${phone.colour} ${phone.brand} ${phone.model}`} className={`product-image ${exactImage ? "exact-product-image" : ""}`} />
           <span className="image-expand-hint" aria-hidden="true">↗</span>
         </button>
         <span className="network-badge">{phone.networkType}</span>
@@ -78,7 +79,7 @@ function ProductCard({ phone }: { phone: PhoneVariant }) {
       {imageOpen && createPortal(<div className="image-lightbox" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setImageOpen(false); }}>
         <section role="dialog" aria-modal="true" aria-label={`${phone.brand} ${phone.model} product image`}>
           <button type="button" className="lightbox-close" onClick={() => setImageOpen(false)} aria-label="Close enlarged image">×</button>
-          <img src={artwork} alt={`${phone.colour} ${phone.brand} ${phone.model}`} />
+          <img src={artwork} alt={`${phone.colour} ${phone.brand} ${phone.model}`} className={exactImage ? "exact-product-image" : ""} />
           <div><strong>{phone.brand} {phone.model}</strong><span>{phone.ramGb}GB / {phone.storageGb}GB · {phone.colour}</span></div>
         </section>
       </div>, document.body)}
