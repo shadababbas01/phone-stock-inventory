@@ -346,7 +346,7 @@ export default function AdminApp() {
     setImageBusy(true);
     try {
       const response = await fetch("/api/admin/product-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestForm) });
-      const data = await response.json() as { matched?: boolean; verified?: boolean; imageUrl?: string; fallbackUrl?: string; matchType?: string; reason?: string; title?: string; brand?: string; productCode?: string };
+      const data = await response.json() as { matched?: boolean; verified?: boolean; imageUrl?: string; fallbackUrl?: string; matchType?: string; source?: string; colourVerified?: boolean; reason?: string; title?: string; brand?: string; productCode?: string };
       if (response.status === 401) { setAuthenticated(false); return; }
       if (data.matched && data.verified && data.imageUrl) {
         setForm(current => ({
@@ -356,7 +356,11 @@ export default function AdminApp() {
           manufacturerCode: current.manufacturerCode || data.productCode || "",
           imageUrl: data.imageUrl ?? "",
         }));
-        setImageStatus(`Verified ${data.matchType === "gtin" ? "barcode" : "manufacturer-code"} image found${data.title ? ` · ${data.title}` : ""}.`);
+        const source = data.source === "official_website" ? "official brand website" : data.source === "upcitemdb" ? "barcode catalogue" : "Icecat";
+        const colourNote = data.source === "official_website" && form.colour
+          ? data.colourVerified ? " · colour matched" : " · verify the colour in the preview"
+          : "";
+        setImageStatus(`Verified through ${source}${colourNote}${data.title ? ` · ${data.title}` : ""}.`);
       } else {
         setForm(current => ({ ...current, imageUrl: "" }));
         setImageStatus(data.reason ?? "No verified exact image was found; generated artwork will be used.");

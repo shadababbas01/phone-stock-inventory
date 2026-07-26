@@ -5,6 +5,7 @@ export type PhoneStockRuntimeEnv = {
   ADMIN_SESSION_SECRET?: string;
   MOBILE_API_KEY?: string;
   ICECAT_SHOPNAME?: string;
+  TAVILY_API_KEY?: string;
 };
 
 declare global {
