@@ -62,6 +62,32 @@ function imageUrlsFrom(value: string) {
     .filter(url => url && !/logo|icon|favicon|sprite|navigation/i.test(url));
 }
 
+function colourImageFromHtml(html: string, colour: string) {
+  if (!colour) return "";
+  const lowerHtml = html.toLowerCase();
+  const lowerColour = colour.toLowerCase();
+  const scored: Array<{ url: string; score: number }> = [];
+  let colourIndex = lowerHtml.indexOf(lowerColour);
+  while (colourIndex >= 0) {
+    const start = Math.max(0, colourIndex - 1_500);
+    const end = Math.min(html.length, colourIndex + 1_500);
+    const window = html.slice(start, end);
+    for (const match of window.matchAll(/https:\\?\/\\?\/[^"'<>\\\s]+\.(?:avif|webp|png|jpe?g)(?:\?[^"'<>\\\s]*)?/gi)) {
+      const url = safeImageUrl(decodedUrl(match[0]));
+      if (!url || /logo|icon|favicon|sprite|navigation/i.test(url)) continue;
+      const absoluteIndex = start + (match.index ?? 0);
+      const distance = Math.abs(colourIndex - absoluteIndex);
+      let score = Math.max(0, 100 - distance / 15);
+      if (absoluteIndex < colourIndex) score += 35;
+      if (/\.(?:jpe?g|png)(?:\?|$)/i.test(url)) score += 20;
+      if (/image\d*\.realme\.net\/general/i.test(url)) score += 70;
+      scored.push({ url, score });
+    }
+    colourIndex = lowerHtml.indexOf(lowerColour, colourIndex + lowerColour.length);
+  }
+  return scored.sort((left, right) => right.score - left.score)[0]?.url ?? "";
+}
+
 async function imageFromOfficialPage(pageUrl: string, model: string, colour: string) {
   try {
     const response = await fetch(pageUrl, {
@@ -70,18 +96,8 @@ async function imageFromOfficialPage(pageUrl: string, model: string, colour: str
     });
     if (!response.ok) return { url: "", colourVerified: false };
     const html = (await response.text()).slice(0, 5_000_000);
-    const colourNeedle = normalized(colour);
-    if (colourNeedle) {
-      const normalizedHtml = normalized(html);
-      const colourIndex = normalizedHtml.indexOf(colourNeedle);
-      if (colourIndex >= 0) {
-        // Normalization changes offsets, so search all occurrences in the original HTML.
-        const originalIndex = html.toLowerCase().indexOf(colour.toLowerCase());
-        const nearby = html.slice(Math.max(0, originalIndex - 1_200), originalIndex + 2_400);
-        const candidates = imageUrlsFrom(nearby);
-        if (candidates[0]) return { url: candidates[0], colourVerified: true };
-      }
-    }
+    const colourImage = colourImageFromHtml(html, colour);
+    if (colourImage) return { url: colourImage, colourVerified: true };
     const meta = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i)
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
     const metaUrl = safeImageUrl(decodedUrl(meta?.[1] ?? ""));
