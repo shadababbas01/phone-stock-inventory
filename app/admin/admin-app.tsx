@@ -6,6 +6,7 @@ import type { IScannerControls } from "@zxing/browser";
 import { money, type PhoneVariant } from "@/lib/catalog";
 import { sampleAdminInventory } from "@/lib/admin-sample";
 import { phoneArtUrl } from "@/lib/phone-art";
+import { parseBoxLabel, type BoxLabelResult } from "@/lib/box-label";
 
 type Tab = "inventory" | "stock" | "reports" | "suppliers" | "settings";
 type DeviceOptions = {
@@ -19,7 +20,7 @@ type DeviceOptions = {
 };
 
 const emptyOptions: DeviceOptions = { brands: [], models: [], colours: [], ramGb: [], storageGb: [], exactMatch: false, source: "catalog" };
-const emptyForm = { brand: "", model: "", gtin: "", manufacturerCode: "", imageUrl: "", ramGb: "8", storageGb: "128", colour: "", networkType: "5G", mrp: "", sellingPrice: "", purchasePrice: "", availableStock: "0", reorderLevel: "2" };
+const emptyForm = { brand: "", model: "", gtin: "", manufacturerCode: "", imageUrl: "", ramGb: "8", storageGb: "128", colour: "", networkType: "5G", imei1: "", imei2: "", serialNumber: "", mrp: "", sellingPrice: "", purchasePrice: "", availableStock: "1", reorderLevel: "2" };
 type InventoryForm = typeof emptyForm;
 
 function scannedGtin(value: string) {
@@ -137,6 +138,62 @@ function BarcodeScanner({ title, onDetected, onClose }: { title: string; onDetec
   );
 }
 
+function BoxPhotoScanner({ onResult, onClose }: { onResult: (result: BoxLabelResult) => void; onClose: () => void }) {
+  const [status, setStatus] = useState("Take a clear photo of the label side of the sealed phone box.");
+  const [progress, setProgress] = useState(0);
+  const [busy, setBusy] = useState(false);
+
+  async function readPhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    setProgress(3);
+    setStatus("Enhancing and reading the label on this phone…");
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const barcodePromise = import("@zxing/browser").then(async ({ BrowserMultiFormatReader }) => {
+        try {
+          const result = await new BrowserMultiFormatReader().decodeFromImageUrl(objectUrl);
+          return [result.getText()];
+        } catch {
+          return [] as string[];
+        }
+      });
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker("eng", 1, {
+        logger: message => {
+          if (message.status === "recognizing text") setProgress(Math.max(5, Math.round((message.progress ?? 0) * 100)));
+          setStatus(message.status === "recognizing text" ? "Reading model, variant and private identifiers…" : "Preparing on-device OCR…");
+        },
+      });
+      const [ocr, codes] = await Promise.all([worker.recognize(file), barcodePromise]);
+      await worker.terminate();
+      const result = parseBoxLabel(ocr.data.text, codes);
+      if (!result.brand && !result.model && !result.manufacturerCode && !result.gtin) {
+        setStatus("The label could not be read. Retake it straight-on in bright light and keep all text sharp.");
+        return;
+      }
+      setProgress(100);
+      onResult(result);
+    } catch {
+      setStatus("The photo could not be processed. Check the connection once, then retake the label in good light.");
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+      setBusy(false);
+    }
+  }
+
+  return <div className="scanner-backdrop" role="presentation"><section className="barcode-scanner box-photo-scanner" role="dialog" aria-modal="true" aria-labelledby="box-photo-title">
+    <div className="scanner-header"><div><span>Private · on-device reading</span><h2 id="box-photo-title">Scan phone-box label</h2></div><button type="button" onClick={onClose} aria-label="Close box scanner">×</button></div>
+    <div className="box-scan-guide"><strong>Photograph the label side</strong><span>Include model, colour, RAM/storage, IMEI and the full barcode. Avoid glare and blur.</span></div>
+    <p className="scanner-status" role="status">{status}</p>
+    {busy && <div className="ocr-progress" aria-hidden="true"><i style={{ width: `${progress}%` }} /></div>}
+    <div className="scanner-actions"><button type="button" className="secondary-btn" onClick={onClose}>Cancel</button><label className={`primary-btn capture-btn ${busy ? "disabled" : ""}`}>{busy ? "Reading photo…" : "Take label photo"}<input type="file" accept="image/*" capture="environment" onChange={readPhoto} disabled={busy} hidden /></label></div>
+    <small>The image is processed in your browser and is not uploaded. IMEI and serial fields stay inside the password-protected admin area.</small>
+  </section></div>;
+}
+
 function Brand({ compact = false }: { compact?: boolean }) {
   return <span className={`brand-lockup ${compact ? "compact" : ""}`}><img src="/mangla-logo.svg" alt="Mangla Communication" className="brand-logo" /></span>;
 }
@@ -161,6 +218,8 @@ export default function AdminApp() {
   const [imageStatus, setImageStatus] = useState("Generated fallback will be used unless an exact identifier matches Icecat.");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerPhone, setScannerPhone] = useState<PhoneVariant | null>(null);
+  const [boxScannerOpen, setBoxScannerOpen] = useState(false);
+  const [scanReview, setScanReview] = useState("");
 
   const loadInventory = async () => {
     const response = await fetch("/api/admin/inventory", { cache: "no-store" });
@@ -252,6 +311,30 @@ export default function AdminApp() {
     event.preventDefault();
     const ok = await mutate({ action: "create", ...form, ramGb: Number(form.ramGb), storageGb: Number(form.storageGb), mrp: Number(form.mrp), sellingPrice: Number(form.sellingPrice), purchasePrice: Number(form.purchasePrice), availableStock: Number(form.availableStock), reorderLevel: Number(form.reorderLevel) });
     if (ok) { setModalOpen(false); setForm(emptyForm); setImageStatus("Generated fallback will be used unless an exact identifier matches Icecat."); }
+  }
+
+  function applyBoxScan(result: BoxLabelResult) {
+    setForm(current => ({
+      ...current,
+      brand: result.brand || current.brand,
+      model: result.model || current.model,
+      manufacturerCode: result.manufacturerCode || current.manufacturerCode,
+      colour: result.colour || current.colour,
+      ramGb: result.ramGb || current.ramGb,
+      storageGb: result.storageGb || current.storageGb,
+      gtin: result.gtin || current.gtin,
+      imei1: result.imei1,
+      imei2: result.imei2,
+      serialNumber: result.serialNumber,
+      imageUrl: "",
+    }));
+    setBoxScannerOpen(false);
+    setScanReview(`Scan filled the form (${result.confidence}% field coverage). Review every value before saving.`);
+    if (result.gtin || (result.brand && result.manufacturerCode)) void findExactImage({
+      brand: result.brand,
+      manufacturerCode: result.manufacturerCode,
+      gtin: result.gtin,
+    });
   }
 
   async function findExactImage(overrides: Partial<InventoryForm> = {}) {
@@ -420,7 +503,7 @@ export default function AdminApp() {
           {(["inventory", "stock", "reports", "suppliers", "settings"] as Tab[]).map(item => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item === "inventory" ? "▦ Inventory" : item === "stock" ? "↕ Stock control" : item === "reports" ? "▥ Reports" : item === "suppliers" ? "♙ Suppliers" : "⚙ Settings"}</button>)}
         </aside>
         <section className="admin-main">
-          <div className="admin-heading"><div><h1>{tabTitle}</h1><p>{tab === "inventory" ? "Manage every exact RAM, storage and colour variant." : tab === "stock" ? "Adjust stock with a permanent reason and audit trail." : tab === "reports" ? "Understand stock value, margin and attention items." : tab === "suppliers" ? "Private supplier records stay hidden from customers." : "Configure how your public shop catalogue behaves."}</p></div>{tab === "inventory" && <button className="primary-btn" onClick={() => setModalOpen(true)}>+ Add phone variant</button>}</div>
+          <div className="admin-heading"><div><h1>{tabTitle}</h1><p>{tab === "inventory" ? "Manage every exact RAM, storage and colour variant." : tab === "stock" ? "Adjust stock with a permanent reason and audit trail." : tab === "reports" ? "Understand stock value, margin and attention items." : tab === "suppliers" ? "Private supplier records stay hidden from customers." : "Configure how your public shop catalogue behaves."}</p></div>{tab === "inventory" && <div className="heading-actions"><button className="secondary-btn" onClick={() => { setModalOpen(true); setBoxScannerOpen(true); }}>▣ Scan box</button><button className="primary-btn" onClick={() => setModalOpen(true)}>+ Add phone variant</button></div>}</div>
           <div className="admin-stats"><div className="admin-stat-card"><span>Total variants</span><strong>{inventory.length}</strong></div><div className="admin-stat-card"><span>Physical stock</span><strong>{totalStock}</strong></div><div className="admin-stat-card"><span>Available to sell</span><strong>{available}</strong></div><div className="admin-stat-card"><span>Low / out of stock</span><strong>{lowStock}</strong></div></div>
 
           {(tab === "inventory" || tab === "stock") && <div className="admin-panel"><div className="panel-tools"><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search model, SKU or colour" />{tab === "inventory" && <label className="secondary-btn import-btn">Import CSV<input type="file" accept=".csv,text/csv" onChange={importCsv} hidden /></label>}<button className="secondary-btn" onClick={exportCsv}>Export CSV</button></div><table className="admin-table"><thead><tr><th>Phone</th><th>Variant</th><th>Price</th><th>Stock</th><th>Private cost</th><th>Actions</th></tr></thead><tbody>{visible.map(phone => { const availableNow = phone.availableStock - phone.reservedStock; return <tr key={phone.id}><td><strong>{phone.brand} {phone.model}</strong><small>{phone.sku}</small></td><td>{phone.ramGb}/{phone.storageGb} GB<br/><small>{phone.colour} · {phone.condition}</small></td><td><strong>{money(phone.sellingPrice)}</strong><small>MRP {money(phone.mrp)}</small></td><td><span className={`status-dot ${availableNow === 0 ? "out" : availableNow <= phone.reorderLevel ? "low" : ""}`} />{availableNow} available<br/><small>{phone.reservedStock} reserved</small></td><td>{money(phone.purchasePrice ?? 0)}<br/><small>Margin {money(phone.sellingPrice - (phone.purchasePrice ?? 0))}</small></td><td><div className="table-actions"><button onClick={() => adjustStock(phone, 1)}>± Stock</button><button onClick={() => updatePrice(phone)}>₹ Price</button><button onClick={() => { setScannerPhone(phone); setScannerOpen(true); }}>▣ Image</button><button onClick={() => archive(phone)}>Archive</button></div></td></tr>; })}</tbody></table></div>}
@@ -432,6 +515,8 @@ export default function AdminApp() {
       </div>
 
       {modalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setModalOpen(false); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="add-phone-title"><div className="modal-header"><h2 id="add-phone-title">Add exact phone variant</h2><button onClick={() => setModalOpen(false)} aria-label="Close">×</button></div><form className="inventory-form" onSubmit={createItem}><div className="form-grid">
+        <div className="scan-box-banner full"><div><strong>Fill from one box photo</strong><span>Reads barcode, model, variant and private identifiers on this device.</span></div><button type="button" className="secondary-btn" onClick={() => setBoxScannerOpen(true)}>Scan label</button></div>
+        {scanReview && <p className="scan-review full" role="status">{scanReview}</p>}
         <label>Brand *<input list="phone-brand-options" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value, model: "", colour: "", imageUrl: "" })} placeholder="Start typing, e.g. Sam" autoComplete="off" required /><datalist id="phone-brand-options">{deviceOptions.brands.map(brand => <option key={brand} value={brand} />)}</datalist></label>
         <label>Model *<input list="phone-model-options" value={form.model} onChange={e => setForm({ ...form, model: e.target.value, colour: "", imageUrl: "" })} placeholder={form.brand ? "Type S, A, iPhone…" : "Choose brand first"} autoComplete="off" disabled={!form.brand} required /><datalist id="phone-model-options">{deviceOptions.models.map(model => <option key={model} value={model} />)}</datalist></label>
         <label>Barcode / GTIN<div className="barcode-input-row"><input value={form.gtin} onChange={e => setForm({ ...form, gtin: e.target.value.replace(/[^0-9]/g, ""), imageUrl: "" })} onBlur={() => { if (form.gtin.length >= 8) void findExactImage(); }} placeholder="Scan or enter barcode" inputMode="numeric" autoComplete="off" /><button type="button" onClick={() => { setScannerPhone(null); setScannerOpen(true); }} aria-label="Scan phone barcode with camera">Scan</button></div><small className="field-help">Use the barcode on the sealed phone box for the most accurate image.</small></label>
@@ -440,6 +525,9 @@ export default function AdminApp() {
         <label>Storage (GB) *<input list="phone-storage-options" type="number" min="1" value={form.storageGb} onChange={e => setForm({ ...form, storageGb: e.target.value })} inputMode="numeric" required /><datalist id="phone-storage-options">{deviceOptions.storageGb.map(value => <option key={value} value={value} />)}</datalist></label>
         <label>Colour *<input list="phone-colour-options" value={form.colour} onChange={e => setForm({ ...form, colour: e.target.value, imageUrl: "" })} placeholder={form.model ? "Choose official colour" : "Choose model first"} autoComplete="off" disabled={!form.model} required /><datalist id="phone-colour-options">{deviceOptions.colours.map(colour => <option key={colour} value={colour} />)}</datalist></label>
         <label>Network<select value={form.networkType} onChange={e => setForm({ ...form, networkType: e.target.value })}><option>5G</option><option>4G</option><option>3G</option></select></label>
+        <label>IMEI 1 (private)<input value={form.imei1} onChange={e => setForm({ ...form, imei1: e.target.value.replace(/\D/g, "").slice(0, 15) })} inputMode="numeric" autoComplete="off" /></label>
+        <label>IMEI 2 (private)<input value={form.imei2} onChange={e => setForm({ ...form, imei2: e.target.value.replace(/\D/g, "").slice(0, 15) })} inputMode="numeric" autoComplete="off" /></label>
+        <label>Serial number (private)<input value={form.serialNumber} onChange={e => setForm({ ...form, serialNumber: e.target.value.slice(0, 40) })} autoComplete="off" /></label>
         <p className="suggestion-status full" aria-live="polite">{suggestionsBusy ? "Finding matching phones and variants…" : deviceOptions.exactMatch ? `Variant choices ready · ${deviceOptions.source === "internet" ? "live device catalogue" : deviceOptions.source === "saved" ? "your saved stock" : "built-in catalogue"}` : "Type or tap a suggestion. You can still enter a model manually."}</p>
         {form.brand && form.model && form.colour && <div className="variant-art-preview full"><img src={phoneArtUrl(form)} alt={`Preview for ${form.brand} ${form.model} in ${form.colour}`} /><div><strong>{form.imageUrl ? "Exact product image" : "Generated image fallback"}</strong><span>{imageStatus}</span><button type="button" className="image-lookup-btn" onClick={() => void findExactImage()} disabled={imageBusy || (!form.gtin && !form.manufacturerCode)}>{imageBusy ? "Checking Icecat…" : "Find exact image"}</button></div></div>}
         <label>MRP (₹) *<input type="number" min="1" value={form.mrp} onChange={e => setForm({ ...form, mrp: e.target.value })} inputMode="numeric" required /></label>
@@ -449,6 +537,7 @@ export default function AdminApp() {
         <label>Low-stock level<input type="number" min="0" value={form.reorderLevel} onChange={e => setForm({ ...form, reorderLevel: e.target.value })} inputMode="numeric" /></label>
       </div><div className="form-actions"><button type="button" className="secondary-btn" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary-btn" disabled={busy}>{busy ? "Saving…" : "Save phone variant"}</button></div></form></div></div>}
       {scannerOpen && <BarcodeScanner title={scannerPhone ? `Scan ${scannerPhone.brand} ${scannerPhone.model}` : "Scan phone-box barcode"} onDetected={gtin => void handleScannedBarcode(gtin)} onClose={() => { setScannerOpen(false); setScannerPhone(null); }} />}
+      {boxScannerOpen && <BoxPhotoScanner onResult={applyBoxScan} onClose={() => setBoxScannerOpen(false)} />}
       {notice && <div className="toast" role="status">{notice}</div>}
     </main>
   );
