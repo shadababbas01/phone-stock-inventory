@@ -113,6 +113,21 @@ export type OfficialImageMatch = {
   colourVerified: boolean;
 };
 
+function productSlug(model: string) {
+  return normalized(model).replaceAll(" ", "-");
+}
+
+function predictableOfficialPages(brandKey: string, model: string) {
+  const slug = productSlug(model);
+  if (!slug) return [];
+  if (brandKey === "realme") return [`https://www.realme.com/in/realme-${slug}`, `https://www.realme.com/in/realme-${slug}/specs`];
+  if (brandKey === "apple") return [`https://www.apple.com/in/${slug}/`];
+  if (brandKey === "oneplus") return [`https://www.oneplus.in/${slug}`];
+  if (brandKey === "motorola") return [`https://www.motorola.in/smartphones-${slug}/p`];
+  if (brandKey === "nothing") return [`https://in.nothing.tech/pages/${slug}`];
+  return [];
+}
+
 export async function findOfficialPhoneImage(input: {
   apiKey: string;
   brand: string;
@@ -123,6 +138,18 @@ export async function findOfficialPhoneImage(input: {
   const brandKey = normalized(input.brand).replaceAll(" ", "");
   const domains = officialDomains[brandKey];
   if (!domains?.length || !input.model) return null;
+  for (const pageUrl of predictableOfficialPages(brandKey, input.model)) {
+    const pageImage = await imageFromOfficialPage(pageUrl, input.model, input.colour);
+    if (pageImage.url) {
+      return {
+        remoteImageUrl: pageImage.url,
+        officialPageUrl: pageUrl,
+        title: `${input.brand} ${input.model}`,
+        sourceDomain: new URL(pageUrl).hostname,
+        colourVerified: pageImage.colourVerified,
+      };
+    }
+  }
   const terms = [input.brand, input.model, input.colour, "official phone"].filter(Boolean);
   const response = await fetch("https://api.tavily.com/search", {
     method: "POST",
