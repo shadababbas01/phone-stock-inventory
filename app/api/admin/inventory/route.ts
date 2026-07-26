@@ -16,6 +16,20 @@ function positiveNumber(value: unknown, fallback = 0) {
   return Number.isFinite(number) && number >= 0 ? number : fallback;
 }
 
+function validImei(value: string) {
+  if (!/^\d{15}$/.test(value)) return false;
+  let sum = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    let digit = Number(value[value.length - 1 - index]);
+    if (index % 2 === 1) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+  }
+  return sum % 10 === 0;
+}
+
 export async function GET(request: Request) {
   if (!(await isAdminRequest(request))) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const db = dbBinding();
@@ -56,11 +70,16 @@ export async function POST(request: Request) {
       const storage = positiveNumber(body.storageGb);
       const gtin = cleanText(body.gtin, 18).replace(/[^0-9]/g, "");
       const manufacturerCode = cleanText(body.manufacturerCode, 60);
+      const imei1 = cleanText(body.imei1, 15).replace(/\D/g, "");
+      const imei2 = cleanText(body.imei2, 15).replace(/\D/g, "");
+      const serialNumber = cleanText(body.serialNumber, 40);
       const mrp = positiveNumber(body.mrp);
       const sellingPrice = positiveNumber(body.sellingPrice);
       const availableStock = Math.floor(positiveNumber(body.availableStock));
       if (!brand || !model || !colour || !ram || !storage || !mrp || !sellingPrice) return Response.json({ error: "Complete all required fields." }, { status: 400 });
       if (sellingPrice > mrp) return Response.json({ error: "Selling price cannot exceed MRP." }, { status: 400 });
+      if (imei1 && !validImei(imei1)) return Response.json({ error: "IMEI 1 failed its check digit. Review the scanned value." }, { status: 400 });
+      if (imei2 && !validImei(imei2)) return Response.json({ error: "IMEI 2 failed its check digit. Review the scanned value." }, { status: 400 });
 
       await db.prepare("INSERT OR IGNORE INTO brands (name, slug) VALUES (?, ?)").bind(brand, brand.toLowerCase().replace(/[^a-z0-9]+/g, "-")).run();
       const brandRow = await db.prepare("SELECT id FROM brands WHERE lower(name) = lower(?)").bind(brand).first<{ id: number }>();
@@ -81,6 +100,10 @@ export async function POST(request: Request) {
       `).bind(modelRow.id, sku, gtin || null, slug, ram, storage, colour, colourHex, cleanText(body.condition, 20) || "New", mrp, sellingPrice, availableStock, Math.floor(positiveNumber(body.reorderLevel, 2)), imageUrl).first<{ id: number }>();
       if (!result) throw new Error("Unable to create variant");
       await db.prepare("INSERT INTO inventory_private (phone_variant_id, purchase_price, minimum_selling_price) VALUES (?, ?, ?)").bind(result.id, positiveNumber(body.purchasePrice), positiveNumber(body.minimumSellingPrice)).run();
+      if (imei1 || imei2 || serialNumber) {
+        await db.prepare("INSERT INTO phone_units (phone_variant_id, imei_1, imei_2, serial_number, unit_status) VALUES (?, ?, ?, ?, 'in_stock')")
+          .bind(result.id, imei1 || null, imei2 || null, serialNumber || null).run();
+      }
       await db.prepare("INSERT INTO audit_logs (action, table_name, record_id, after_data) VALUES ('CREATE', 'phone_variants', ?, ?)").bind(result.id, JSON.stringify({ brand, model, sku })).run();
       return Response.json({ ok: true, id: result.id }, { status: 201 });
     }
