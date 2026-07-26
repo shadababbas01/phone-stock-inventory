@@ -183,7 +183,8 @@ export async function findOfficialPhoneImage(input: {
   if (!domains?.length || (!input.model && !input.manufacturerCode)) return null;
   for (const pageUrl of predictableOfficialPages(brandKey, input.model, input.manufacturerCode)) {
     const pageImage = await imageFromOfficialPage(pageUrl, input.model, input.colour, input.manufacturerCode);
-    if (pageImage.url && (!input.manufacturerCode || pageImage.identifierVerified)) {
+    const verifiedCodePage = officialProductCodePages[`${brandKey}:${normalized(input.manufacturerCode).replaceAll(" ", "")}`]?.includes(pageUrl);
+    if (pageImage.url && (!input.manufacturerCode || pageImage.identifierVerified || verifiedCodePage)) {
       return {
         remoteImageUrl: pageImage.url,
         officialPageUrl: pageUrl,
