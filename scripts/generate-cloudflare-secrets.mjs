@@ -13,5 +13,6 @@ const secrets = {
 };
 if (process.env.MOBILE_API_KEY) secrets.MOBILE_API_KEY = process.env.MOBILE_API_KEY;
 if (process.env.ICECAT_SHOPNAME) secrets.ICECAT_SHOPNAME = process.env.ICECAT_SHOPNAME;
+if (process.env.TAVILY_API_KEY) secrets.TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 
 process.stdout.write(JSON.stringify(secrets));
