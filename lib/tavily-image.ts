@@ -62,10 +62,19 @@ function imageUrlsFrom(value: string) {
     .filter(url => url && !/logo|icon|favicon|sprite|navigation/i.test(url));
 }
 
-function colourImageFromHtml(html: string, colour: string) {
+function colourImageFromHtml(html: string, colour: string, pageUrl: string) {
   if (!colour) return "";
   const lowerHtml = html.toLowerCase();
   const lowerColour = colour.toLowerCase();
+  const oppoColourNames = [...html.matchAll(/data-ga-module=["']Color["'][^>]+data-ga-name=["']([^"']+)["']/gi)]
+    .map(match => normalized(match[1]));
+  const oppoColourIndex = oppoColourNames.indexOf(normalized(colour));
+  if (oppoColourIndex >= 0) {
+    const oppoColourImages = [...new Set([...html.matchAll(/data-one-src=["'](\/content\/dam\/[^"']+\/images\/pc\/color\d+\.png)["']/gi)]
+      .map(match => match[1]))];
+    const selectedPath = oppoColourImages[oppoColourIndex];
+    if (selectedPath) return new URL(selectedPath, pageUrl).toString();
+  }
   const scored: Array<{ url: string; score: number }> = [];
   let colourIndex = lowerHtml.indexOf(lowerColour);
   while (colourIndex >= 0) {
@@ -103,7 +112,7 @@ async function imageFromOfficialPage(pageUrl: string, model: string, colour: str
     });
     if (!response.ok) return { url: "", colourVerified: false, identifierVerified: false };
     const html = (await response.text()).slice(0, 5_000_000);
-    const colourImage = colourImageFromHtml(html, colour);
+    const colourImage = colourImageFromHtml(html, colour, pageUrl);
     const identifierVerified = Boolean(manufacturerCode && normalized(html).includes(normalized(manufacturerCode)));
     if (colourImage) return { url: colourImage, colourVerified: true, identifierVerified };
     const meta = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i)
@@ -144,8 +153,8 @@ function productSlug(model: string) {
 
 const officialProductCodePages: Record<string, string[]> = {
   "oppo:cph2729": [
-    "https://www.oppo.com/in/smartphones/series-k/k13-5g/specs/",
     "https://www.oppo.com/in/smartphones/series-k/k13-5g/",
+    "https://www.oppo.com/in/smartphones/series-k/k13-5g/specs/",
   ],
 };
 
