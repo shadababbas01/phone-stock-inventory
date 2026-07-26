@@ -50,10 +50,8 @@ export async function POST(request: Request) {
       signal: AbortSignal.timeout(9_000),
     });
     if (!response.ok) {
-      const reason = response.status === 401 || response.status === 403
-        ? "Icecat rejected the account request. Check account activation or IP access in Icecat."
-        : "No exact Icecat image was available; generated artwork will be used.";
-      if (!gtin) return Response.json({ matched: false, reason, fallbackUrl });
+      // Continue to the official manufacturer search. Icecat is only the first
+      // source and must not prevent a real image from being found elsewhere.
     }
     const product = parseIcecatProduct(await response.json());
     if (product) {
@@ -72,7 +70,7 @@ export async function POST(request: Request) {
       return Response.json({ matched: true, verified: true, matchType, source: "icecat", ...product, fallbackUrl });
     }
   } catch {
-    if (!gtin) return Response.json({ matched: false, reason: "Icecat could not be reached; generated artwork will be used.", fallbackUrl });
+    // Continue to the official manufacturer search.
   }
 
   const tavilyApiKey = getRuntimeEnv().TAVILY_API_KEY;
@@ -127,5 +125,5 @@ export async function POST(request: Request) {
   } catch {
     // The generated artwork below is safer than an unverified search result.
   }
-  return Response.json({ matched: false, reason: "No verified image was found in Icecat or the barcode catalogue. Generated artwork will be used.", fallbackUrl });
+  return Response.json({ matched: false, reason: "No verified real image was found. Check the extracted model code and colour, then try again.", fallbackUrl });
 }
