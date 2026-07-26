@@ -72,6 +72,13 @@ function colourImageFromHtml(html: string, colour: string) {
     const start = Math.max(0, colourIndex - 1_500);
     const end = Math.min(html.length, colourIndex + 1_500);
     const window = html.slice(start, end);
+    const beforeColour = html.slice(start, colourIndex);
+    const realmeCatalogueImages = imageUrlsFrom(beforeColour).filter(url =>
+      /image\d*\.realme\.net\/general/i.test(url) && /\.(?:jpe?g|png)(?:\?|$)/i.test(url)
+    );
+    // Realme serializes desktop then mobile renders immediately before each colour label.
+    // Prefer the desktop asset so landscape inventory cards do not crop to blank whitespace.
+    if (realmeCatalogueImages.length >= 2) return realmeCatalogueImages[realmeCatalogueImages.length - 2];
     for (const match of window.matchAll(/https:\\?\/\\?\/[^"'<>\\\s]+\.(?:avif|webp|png|jpe?g)(?:\?[^"'<>\\\s]*)?/gi)) {
       const url = safeImageUrl(decodedUrl(match[0]));
       if (!url || /logo|icon|favicon|sprite|navigation/i.test(url)) continue;
