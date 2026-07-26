@@ -160,7 +160,7 @@ export async function findOfficialPhoneImage(input: {
 }): Promise<OfficialImageMatch | null> {
   const brandKey = normalized(input.brand).replaceAll(" ", "");
   const domains = officialDomains[brandKey];
-  if (!domains?.length || !input.model) return null;
+  if (!domains?.length || (!input.model && !input.manufacturerCode)) return null;
   for (const pageUrl of predictableOfficialPages(brandKey, input.model)) {
     const pageImage = await imageFromOfficialPage(pageUrl, input.model, input.colour);
     if (pageImage.url) {
@@ -173,7 +173,9 @@ export async function findOfficialPhoneImage(input: {
       };
     }
   }
-  const terms = [input.brand, input.model, input.colour, "official phone"].filter(Boolean);
+  // The manufacturer code is normally unique and is substantially more reliable
+  // than a commercial model name extracted by OCR.
+  const terms = [input.brand, input.manufacturerCode, input.model, input.colour, "official phone"].filter(Boolean);
   const response = await fetch("https://api.tavily.com/search", {
     method: "POST",
     headers: {
@@ -183,7 +185,7 @@ export async function findOfficialPhoneImage(input: {
     body: JSON.stringify({
       query: terms.join(" "),
       topic: "general",
-      search_depth: "basic",
+      search_depth: "advanced",
       max_results: 5,
       include_images: true,
       include_image_descriptions: true,

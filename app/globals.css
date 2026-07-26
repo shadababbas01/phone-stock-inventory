@@ -206,6 +206,8 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
 .suggestion-status { margin: -2px 0 1px; padding: 10px 12px; border-radius: 10px; background: #edf7f4; color: #196f66; font-size: 12px; font-weight: 700; line-height: 1.4; }
 .variant-art-preview { display: grid; grid-template-columns: 112px 1fr; align-items: center; gap: 14px; padding: 11px; border: 1px solid #dbc5ad; border-radius: 13px; background: #fff; }
 .variant-art-preview img { width: 112px; height: 90px; object-fit: cover; border-radius: 9px; }
+.real-image-loading, .real-image-missing { width: 112px; min-width: 112px; height: 90px; display: grid; place-items: center; padding: 10px; border: 1px dashed #c9ad90; border-radius: 9px; background: #faf7f2; color: var(--muted); font-size: 11px; font-weight: 700; line-height: 1.35; text-align: center; }
+.real-image-loading { color: #bf6900; }
 .variant-art-preview strong, .variant-art-preview span { display: block; }
 .variant-art-preview strong { margin-bottom: 5px; color: #49382f; font-size: 13px; }
 .variant-art-preview span { color: var(--muted); font-size: 11px; line-height: 1.45; }
@@ -406,6 +408,7 @@ footer a { font-size: 12px; color: #f0aa47; font-weight: 700; }
   .form-grid .full { grid-column: auto; }
   .variant-art-preview { grid-template-columns: 92px 1fr; }
   .variant-art-preview img { width: 92px; height: 76px; }
+  .real-image-loading, .real-image-missing { width: 92px; min-width: 92px; height: 76px; }
 }
 
 @media (max-width: 420px) {

@@ -215,7 +215,7 @@ export default function AdminApp() {
   const [deviceOptions, setDeviceOptions] = useState<DeviceOptions>(emptyOptions);
   const [suggestionsBusy, setSuggestionsBusy] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
-  const [imageStatus, setImageStatus] = useState("Generated fallback will be used unless an exact identifier matches Icecat.");
+  const [imageStatus, setImageStatus] = useState("Scan the box to find a verified real product image.");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerPhone, setScannerPhone] = useState<PhoneVariant | null>(null);
   const [boxScannerOpen, setBoxScannerOpen] = useState(false);
@@ -303,14 +303,19 @@ export default function AdminApp() {
     const response = await fetch("/api/admin/inventory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const data = await response.json();
     setBusy(false);
-    if (!response.ok) { setNotice(data.error ?? "Unable to save changes."); return false; }
+    if (!response.ok) {
+      const message = data.error ?? "Unable to save changes.";
+      setNotice(message);
+      if (data.code === "DUPLICATE_SKU") setScanReview(message);
+      return false;
+    }
     await loadInventory(); setNotice("Inventory updated successfully"); return true;
   }
 
   async function createItem(event: FormEvent) {
     event.preventDefault();
     const ok = await mutate({ action: "create", ...form, ramGb: Number(form.ramGb), storageGb: Number(form.storageGb), mrp: Number(form.mrp), sellingPrice: Number(form.sellingPrice), purchasePrice: Number(form.purchasePrice), availableStock: Number(form.availableStock), reorderLevel: Number(form.reorderLevel) });
-    if (ok) { setModalOpen(false); setForm(emptyForm); setImageStatus("Generated fallback will be used unless an exact identifier matches Icecat."); }
+    if (ok) { setModalOpen(false); setForm(emptyForm); setImageStatus("Scan the box to find a verified real product image."); }
   }
 
   function applyBoxScan(result: BoxLabelResult) {
@@ -329,12 +334,20 @@ export default function AdminApp() {
       imageUrl: "",
     }));
     setBoxScannerOpen(false);
-    setScanReview(`Scan filled the form (${result.confidence}% field coverage). Review every value before saving.`);
-    if (result.gtin || (result.brand && result.manufacturerCode)) void findExactImage({
-      brand: result.brand,
-      manufacturerCode: result.manufacturerCode,
-      gtin: result.gtin,
-    });
+    setScanReview(`Scan filled the form (${result.confidence}% field coverage). Finding the verified real phone image now…`);
+    if (result.gtin || (result.brand && result.manufacturerCode)) {
+      void findExactImage({
+        brand: result.brand,
+        model: result.model,
+        manufacturerCode: result.manufacturerCode,
+        colour: result.colour,
+        ramGb: result.ramGb || form.ramGb,
+        storageGb: result.storageGb || form.storageGb,
+        gtin: result.gtin,
+      });
+    } else {
+      setImageStatus("The scan did not find a barcode or manufacturer code. Retake the label photo before saving.");
+    }
   }
 
   async function findExactImage(overrides: Partial<InventoryForm> = {}) {
@@ -361,13 +374,15 @@ export default function AdminApp() {
           ? data.colourVerified ? " · colour matched" : " · verify the colour in the preview"
           : "";
         setImageStatus(`Verified through ${source}${colourNote}${data.title ? ` · ${data.title}` : ""}.`);
+        setScanReview(`Real product image found and verified through ${source}. Review the extracted details, then save.`);
       } else {
         setForm(current => ({ ...current, imageUrl: "" }));
-        setImageStatus(data.reason ?? "No verified exact image was found; generated artwork will be used.");
+        setImageStatus(data.reason ?? "No verified real image was found. Retake the label or check the model details.");
+        setScanReview("No verified real phone image was found. The system will not present generated artwork as an exact match.");
       }
     } catch {
       setForm(current => ({ ...current, imageUrl: "" }));
-      setImageStatus("Image lookup is unavailable; generated artwork will be used.");
+      setImageStatus("Real-image lookup is temporarily unavailable. Check the connection and try again.");
     } finally {
       setImageBusy(false);
     }
@@ -433,13 +448,13 @@ export default function AdminApp() {
     await mutate({ action: "updatePrice", id: phone.id, sellingPrice: Number(raw), reason: "Quick price update" });
   }
 
-  async function archive(phone: PhoneVariant) {
-    if (!window.confirm(`Archive ${phone.brand} ${phone.model} (${phone.ramGb}/${phone.storageGb}, ${phone.colour})?`)) return;
-    const confirmation = window.prompt("Re-enter the admin password to confirm destructive action:");
+  async function deleteItem(phone: PhoneVariant) {
+    if (!window.confirm(`Permanently delete ${phone.brand} ${phone.model} (${phone.ramGb}/${phone.storageGb}, ${phone.colour})?\n\nThis is required before adding the same SKU as a new item.`)) return;
+    const confirmation = window.prompt("Re-enter the admin password to confirm permanent deletion:");
     if (!confirmation) return;
     const auth = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: confirmation }) });
     if (!auth.ok) { setNotice("Password confirmation failed"); return; }
-    await mutate({ action: "archive", id: phone.id });
+    await mutate({ action: "delete", id: phone.id });
   }
 
   function exportCsv() {
@@ -510,7 +525,7 @@ export default function AdminApp() {
           <div className="admin-heading"><div><h1>{tabTitle}</h1><p>{tab === "inventory" ? "Manage every exact RAM, storage and colour variant." : tab === "stock" ? "Adjust stock with a permanent reason and audit trail." : tab === "reports" ? "Understand stock value, margin and attention items." : tab === "suppliers" ? "Private supplier records stay hidden from customers." : "Configure how your public shop catalogue behaves."}</p></div>{tab === "inventory" && <div className="heading-actions"><button className="secondary-btn" onClick={() => { setModalOpen(true); setBoxScannerOpen(true); }}>▣ Scan box</button><button className="primary-btn" onClick={() => setModalOpen(true)}>+ Add phone variant</button></div>}</div>
           <div className="admin-stats"><div className="admin-stat-card"><span>Total variants</span><strong>{inventory.length}</strong></div><div className="admin-stat-card"><span>Physical stock</span><strong>{totalStock}</strong></div><div className="admin-stat-card"><span>Available to sell</span><strong>{available}</strong></div><div className="admin-stat-card"><span>Low / out of stock</span><strong>{lowStock}</strong></div></div>
 
-          {(tab === "inventory" || tab === "stock") && <div className="admin-panel"><div className="panel-tools"><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search model, SKU or colour" />{tab === "inventory" && <label className="secondary-btn import-btn">Import CSV<input type="file" accept=".csv,text/csv" onChange={importCsv} hidden /></label>}<button className="secondary-btn" onClick={exportCsv}>Export CSV</button></div><table className="admin-table"><thead><tr><th>Phone</th><th>Variant</th><th>Price</th><th>Stock</th><th>Private cost</th><th>Actions</th></tr></thead><tbody>{visible.map(phone => { const availableNow = phone.availableStock - phone.reservedStock; return <tr key={phone.id}><td><strong>{phone.brand} {phone.model}</strong><small>{phone.sku}</small></td><td>{phone.ramGb}/{phone.storageGb} GB<br/><small>{phone.colour} · {phone.condition}</small></td><td><strong>{money(phone.sellingPrice)}</strong><small>MRP {money(phone.mrp)}</small></td><td><span className={`status-dot ${availableNow === 0 ? "out" : availableNow <= phone.reorderLevel ? "low" : ""}`} />{availableNow} available<br/><small>{phone.reservedStock} reserved</small></td><td>{money(phone.purchasePrice ?? 0)}<br/><small>Margin {money(phone.sellingPrice - (phone.purchasePrice ?? 0))}</small></td><td><div className="table-actions"><button onClick={() => adjustStock(phone, 1)}>± Stock</button><button onClick={() => updatePrice(phone)}>₹ Price</button><button onClick={() => { setScannerPhone(phone); setScannerOpen(true); }}>▣ Image</button><button onClick={() => archive(phone)}>Archive</button></div></td></tr>; })}</tbody></table></div>}
+          {(tab === "inventory" || tab === "stock") && <div className="admin-panel"><div className="panel-tools"><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search model, SKU or colour" />{tab === "inventory" && <label className="secondary-btn import-btn">Import CSV<input type="file" accept=".csv,text/csv" onChange={importCsv} hidden /></label>}<button className="secondary-btn" onClick={exportCsv}>Export CSV</button></div><table className="admin-table"><thead><tr><th>Phone</th><th>Variant</th><th>Price</th><th>Stock</th><th>Private cost</th><th>Actions</th></tr></thead><tbody>{visible.map(phone => { const availableNow = phone.availableStock - phone.reservedStock; return <tr key={phone.id}><td><strong>{phone.brand} {phone.model}</strong><small>{phone.sku}</small></td><td>{phone.ramGb}/{phone.storageGb} GB<br/><small>{phone.colour} · {phone.condition}</small></td><td><strong>{money(phone.sellingPrice)}</strong><small>MRP {money(phone.mrp)}</small></td><td><span className={`status-dot ${availableNow === 0 ? "out" : availableNow <= phone.reorderLevel ? "low" : ""}`} />{availableNow} available<br/><small>{phone.reservedStock} reserved</small></td><td>{money(phone.purchasePrice ?? 0)}<br/><small>Margin {money(phone.sellingPrice - (phone.purchasePrice ?? 0))}</small></td><td><div className="table-actions"><button onClick={() => adjustStock(phone, 1)}>± Stock</button><button onClick={() => updatePrice(phone)}>₹ Price</button><button onClick={() => { setScannerPhone(phone); setScannerOpen(true); }}>▣ Image</button><button onClick={() => deleteItem(phone)}>Delete</button></div></td></tr>; })}</tbody></table></div>}
 
           {tab === "reports" && <div className="report-grid"><div className="report-card"><h3>Inventory cost</h3><p>Approximate purchase value of current physical stock.</p><strong>{money(costValue)}</strong></div><div className="report-card"><h3>Retail value</h3><p>Potential revenue at current selling prices.</p><strong>{money(retailValue)}</strong></div><div className="report-card"><h3>Potential gross margin</h3><p>Retail value minus recorded purchase cost.</p><strong>{money(retailValue - costValue)}</strong></div><div className="report-card"><h3>Attention needed</h3><p>Variants at or below their reorder level.</p><strong>{lowStock} variants</strong></div></div>}
           {tab === "suppliers" && <div className="admin-panel"><div className="admin-empty"><h3>Supplier register is private</h3><p>Add supplier records after connecting the production database. Supplier details are never included in public inventory responses.</p><button className="primary-btn" onClick={() => setNotice("Supplier workflow is ready for database setup")}>+ Add supplier</button></div></div>}
@@ -533,7 +548,14 @@ export default function AdminApp() {
         <label>IMEI 2 (private)<input value={form.imei2} onChange={e => setForm({ ...form, imei2: e.target.value.replace(/\D/g, "").slice(0, 15) })} inputMode="numeric" autoComplete="off" /></label>
         <label>Serial number (private)<input value={form.serialNumber} onChange={e => setForm({ ...form, serialNumber: e.target.value.slice(0, 40) })} autoComplete="off" /></label>
         <p className="suggestion-status full" aria-live="polite">{suggestionsBusy ? "Finding matching phones and variants…" : deviceOptions.exactMatch ? `Variant choices ready · ${deviceOptions.source === "internet" ? "live device catalogue" : deviceOptions.source === "saved" ? "your saved stock" : "built-in catalogue"}` : "Type or tap a suggestion. You can still enter a model manually."}</p>
-        {form.brand && form.model && form.colour && <div className="variant-art-preview full"><img src={phoneArtUrl(form)} alt={`Preview for ${form.brand} ${form.model} in ${form.colour}`} /><div><strong>{form.imageUrl ? "Exact product image" : "Generated image fallback"}</strong><span>{imageStatus}</span><button type="button" className="image-lookup-btn" onClick={() => void findExactImage()} disabled={imageBusy || (!form.gtin && !form.manufacturerCode)}>{imageBusy ? "Checking Icecat…" : "Find exact image"}</button></div></div>}
+        {form.brand && form.model && form.colour && <div className="variant-art-preview full">
+          {imageBusy
+            ? <div className="real-image-loading" role="status">Finding real image…</div>
+            : form.imageUrl
+              ? <img src={phoneArtUrl(form)} alt={`Verified ${form.colour} ${form.brand} ${form.model}`} />
+              : <div className="real-image-missing" aria-hidden="true">No verified image</div>}
+          <div><strong>{form.imageUrl ? "Verified real product image" : imageBusy ? "Searching official sources" : "Real image not verified yet"}</strong><span>{imageStatus}</span><button type="button" className="image-lookup-btn" onClick={() => void findExactImage()} disabled={imageBusy || (!form.gtin && !form.manufacturerCode)}>{imageBusy ? "Finding real image…" : "Find real image"}</button></div>
+        </div>}
         <label>MRP (₹) *<input type="number" min="1" value={form.mrp} onChange={e => setForm({ ...form, mrp: e.target.value })} inputMode="numeric" required /></label>
         <label>Selling price (₹) *<input type="number" min="1" value={form.sellingPrice} onChange={e => setForm({ ...form, sellingPrice: e.target.value })} inputMode="numeric" required /></label>
         <label>Purchase price (private)<input type="number" min="0" value={form.purchasePrice} onChange={e => setForm({ ...form, purchasePrice: e.target.value })} inputMode="numeric" /></label>
